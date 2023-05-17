@@ -1,6 +1,6 @@
 const todo = {
   "Make a nice todo list" : "Done",
-  "Make the page remember how many times it's been reloaded" : "Planned",
+  "Make the page remember how many times it's been reloaded" : "Done",
   "Setup canvas" : "Planned",
   "Make canvas stretch to fill screen" : "Planned",
   "Setup game loop" : "Planned",
