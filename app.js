@@ -5,20 +5,21 @@ const todo = {
   "Make canvas stretch to fill screen" : "Done",
   "Setup game loop" : "Done",
   "Create renderstack" : "Done",
-  "Add rendering of renderstack" : "In Progress",
-  "Add different renderstack tags" : "In Progress",
-  "Create a modular GUI" : "Planned",
-  "Add buttons to the GUI" : "Planned",
-  "Add on open / on closed functions for the GUI" : "Planned",
+  "Add rendering of renderstack" : "Done",
+  "Add different renderstack modes for the gui" : "Done",
   "Add keyboard inputs" : "Planned",
   "Add mouse button inputs" : "Planned",
   "Add mouse wheel inputs" : "Planned",
+  "Create a modular GUI" : "Planned",
+  "Add buttons to the GUI" : "Planned",
+  "Add on open / on closed functions for the GUI" : "Planned",
   "Make GUIs draggable" : "Planned",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
   "Add support for convex shapes" : "Planned",
   "Add support for creation of composites" : "Planned",
   "Add composites parts with blocks" : "Planned",
+  "Add rendering for matter blocks" : "Planned",
   "Add composites parts with constraints" : "Planned",
   "Add settings for collision filtering" : "Planned",
   "Add collision tags to composite main / branches" : "Planned",
@@ -30,9 +31,9 @@ const todo = {
   "Add an option to render matter blocks collsions" : "Planned",
   "Add an option to render matter constraints" : "Planned",
   "Add an option to render matter blocks coverart" : "Planned",
-  "Add a viewport" : "In Progress",
+  "Add a viewport" : "Done",
   "Add an option to make the vieport follow a composite" : "Planned",
-  "Make the viewport fill the screen" : "Planned",
+  "Make the viewport fill the screen" : "Done",
   "Add mulltiple viewport transistion effects" : "Planned",
   "Make the matter engine take deltaTime" : "Planned",
   "Add an object for controll mapping" : "Planned",
@@ -94,6 +95,7 @@ feedback()
 
 //Setup global vars
 let renderStack = []
+const backgroundTransparency = 1
 
 //Setup canvas
 const canvas = document.querySelector('canvas');
@@ -101,7 +103,7 @@ const ctx = canvas.getContext('2d');
 
 let vieport = {
   x: 0,
-  y: 0,
+  y: 500,
   size: 500
 }
 
@@ -115,7 +117,9 @@ resize()
 
 //Do the rendering
 function render(inputOptions) {
-  ctx.fillStyle = 'rgb(50,50,50)'
+
+  //clear the screen and set the background
+  ctx.fillStyle = `rgb(30,30,30,${backgroundTransparency})`
   ctx.fillRect(0,0,canvas.width,canvas.height)
 
   //Set options
@@ -126,46 +130,58 @@ function render(inputOptions) {
   //sort the stack by stage
   renderStack.sort(function(a,b){a.stage-b.stage})
   
-  /*
+  //the scale to use to make stuff thats supposed to fill the screen does it right
+  const scale = Math.min(canvas.width,canvas.height)
 
-  {
-    stage : 5.2
-    translated : false || true 
-    size : 100 (if not translated)
-    path : [{x:0,y:0},{x:0,y:1},{x:1,y:1},{x:1,y:0,jump:true}]
-    mode : fill || line
-    color : [255,100,0,.5]
-    lineWidth : .25 (only needed if mode == line)
-    x : 100 (if not translated)
-    y : 100 (if not translated)
-  }
-
-  */
-
+  //go block by block in the render stack
   for (let index in renderStack) {
     const block = renderStack[index]
+
+    //start the path
     ctx.beginPath()
+
+    //if the line needs scaling do it here
+    if ((!block.translated) && block.mode == "line") {
+      block.lineWidth *= block.size
+      block.lineWidth /= vieport.size
+      block.lineWidth *= scale
+    }
+
+    //then point by point
     for (let pointIndex in block.path) {
       let point = block.path[pointIndex]
-      if (!block.translated) {
-        //translate the point
 
-        point.x *= 100
-        point.y *= 100
+      //translate the point if needed
+      if (!block.translated) {
+        point.x *= block.size
+        point.y *= block.size
 
         point.x += block.x
         point.y += block.y
 
-        point.x += vieport.x
-        point.y += vieport.y
+        point.x -= vieport.x
+        point.y -= vieport.y
+
+        point.x /= vieport.size
+        point.y /= vieport.size
+
+        point.x *= scale
+        point.y *= scale
+
       }
+
+      //if the point jumps do a moveTo instead of lineTo (mainly for lines that don't always connect)
       if (point.jump) {
         ctx.moveTo(point.x, point.y)
       } else {
         ctx.lineTo(point.x, point.y)
       }
     }
+
+    //set the color to a var so I don't call it 4 times
     const color = block.color
+
+    //fill or stroke as needed
     if (block.mode == "fill") {
       ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
       ctx.fill()
@@ -193,14 +209,14 @@ function temp() {
     path : [{x:0,y:0},{x:0,y:1},{x:1,y:1,jump:true},{x:1,y:0}],
     mode : "line",
     color : [255,100,255,.5],
-    lineWidth : 25,
+    lineWidth : .25,
     x : 500,
     y : 500
   })
   renderStack.push({
     stage : -.3,
     translated : false,
-    size : 100,
+    size : 500,
     path : [{x:0.4,y:0},{x:0.6,y:0},{x:0.8,y:0.1},{x:0.9,y:0.2},{x:1,y:0.4},{x:1,y:0.6},{x:0.9,y:0.8},{x:0.8,y:0.9},{x:0.6,y:1},{x:0.4,y:1},{x:0.2,y:0.9},{x:0.1,y:0.8},{x:0,y:0.6},{x:0,y:0.4},{x:0.1,y:0.2},{x:0.2,y:0.1}],
     mode : "fill",
     color : [0,100,0,.5],
@@ -209,7 +225,7 @@ function temp() {
   })
 
 
-  vieport.x = Math.sin(Date.now()/1000)*500
+  vieport.x = Math.abs(Math.sin(Date.now()/2000)*500)
 }
 
 
