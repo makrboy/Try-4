@@ -1,10 +1,10 @@
 const todo = {
   "Make a nice todo list" : "Done",
   "Make the page remember how many times it's been reloaded" : "Done",
-  "Setup canvas" : "Planned",
-  "Make canvas stretch to fill screen" : "Planned",
-  "Setup game loop" : "Planned",
-  "Create renderstack" : "Planned",
+  "Setup canvas" : "Done",
+  "Make canvas stretch to fill screen" : "Done",
+  "Setup game loop" : "Done",
+  "Create renderstack" : "Done",
   "Add rendering of renderstack" : "Planned",
   "Add different renderstack tags" : "Planned",
   "Create a modular GUI" : "Planned",
@@ -91,3 +91,30 @@ function feedback() {
   console.debug(message)
 }
 feedback()
+
+//setup global vars
+let renderStack = []
+
+//setup canvas
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+
+//make the canvas always fill the screen
+function resize() {
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+}
+window.onresize = resize
+resize()
+
+//the main loop
+let [lastTime, updateindex] = [0, 0]
+function update(inputTime) {
+  const deltaTime = inputTime - lastTime
+  lastTime = inputTime
+  
+  //start the next loop
+  updateindex++
+  requestAnimationFrame(update)
+}
+requestAnimationFrame(update)
