@@ -7,9 +7,9 @@ const todo = {
   "Create renderstack" : "Done",
   "Add rendering of renderstack" : "Done",
   "Add different renderstack modes for the gui" : "Done",
-  "Add keyboard inputs" : "Planned",
-  "Add mouse button inputs" : "Planned",
-  "Add mouse wheel inputs" : "Planned",
+  "Add keyboard inputs" : "Done",
+  "Add mouse button inputs" : "Done",
+  "Add mouse posision inputs" : "Done",
   "Create a modular GUI" : "Planned",
   "Add buttons to the GUI" : "Planned",
   "Add on open / on closed functions for the GUI" : "Planned",
@@ -96,11 +96,18 @@ feedback()
 //Setup global vars
 let renderStack = []
 const backgroundTransparency = 1
+let playerInputs = {
+  buttons: {
+  },
+  mousePosistion: {
+    x: 0,
+    y: 0
+  }
+}
 
 //Setup canvas
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
-
 let vieport = {
   x: 0,
   y: 500,
@@ -114,6 +121,52 @@ function resize() {
 }
 window.onresize = resize
 resize()
+
+//putting all the event listiners here so they don't take up so much space
+function getPlayerInputs() {
+
+  //add keys if allowed
+  window.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase()
+    const allowedKeys = ['delete', 'escape', 'backspace', '0', '9', '8', '7', '6', '5', '4', '3', '2', '1', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'l', 'k', 'j', 'h', 'g', 'f', 'd', 's', 'a', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'shift', ' ', 'enter', 'arrowright', 'arrowleft', 'arrowup', 'arrowdown']
+    if (allowedKeys.includes(key) && (!playerInputs.buttons[key])) {
+      playerInputs.buttons[key] = Math.round(event.timeStamp)
+    }
+  })
+
+  //remove keys
+  window.addEventListener("keyup", (event) => {
+    delete playerInputs.buttons[event.key.toLowerCase()]
+  })
+
+  //prevent users from rightclicking open the menu
+  window.addEventListener('contextmenu', function(event) {
+    event.preventDefault()
+  })
+
+  //add mouse buttons
+  window.addEventListener("mousedown", (event) => {
+    const buttonNames = {0:"mouseLeft",1:"mouseMiddle",2:"mouseRight"}
+    const button = buttonNames[event.button]
+    if (!playerInputs.buttons[button]) {
+      playerInputs.buttons[button] = Math.round(event.timeStamp)
+    }
+  })
+
+  //remove mouse buttons
+  window.addEventListener("mouseup", (event) => {
+    const buttonNames = {0:"mouseLeft",1:"mouseMiddle",2:"mouseRight"}
+    const button = buttonNames[event.button]
+    delete playerInputs.buttons[button]
+  })
+
+  //track the mouse posistion
+  window.addEventListener("mousemove", (event) => {
+    playerInputs.mousePosistion.x = event.x
+    playerInputs.mousePosistion.y = event.y
+  })
+}
+getPlayerInputs()
 
 //Do the rendering
 function render(inputOptions) {
@@ -194,6 +247,7 @@ function render(inputOptions) {
 }
 
 function temp() {
+
   renderStack = []
   renderStack.push({
     stage : 5.2,
@@ -227,8 +281,6 @@ function temp() {
 
   vieport.x = Math.abs(Math.sin(Date.now()/2000)*500)
 }
-
-
 
 //The main loop
 let [lastTime, updateindex] = [0, 0]
