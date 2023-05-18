@@ -5,8 +5,8 @@ const todo = {
   "Make canvas stretch to fill screen" : "Done",
   "Setup game loop" : "Done",
   "Create renderstack" : "Done",
-  "Add rendering of renderstack" : "Planned",
-  "Add different renderstack tags" : "Planned",
+  "Add rendering of renderstack" : "In Progress",
+  "Add different renderstack tags" : "In Progress",
   "Create a modular GUI" : "Planned",
   "Add buttons to the GUI" : "Planned",
   "Add on open / on closed functions for the GUI" : "Planned",
@@ -30,7 +30,7 @@ const todo = {
   "Add an option to render matter blocks collsions" : "Planned",
   "Add an option to render matter constraints" : "Planned",
   "Add an option to render matter blocks coverart" : "Planned",
-  "Add a viewport" : "Planned",
+  "Add a viewport" : "In Progress",
   "Add an option to make the vieport follow a composite" : "Planned",
   "Make the viewport fill the screen" : "Planned",
   "Add mulltiple viewport transistion effects" : "Planned",
@@ -59,7 +59,7 @@ const todo = {
   "Add sounds" : "Planned",
 }
 
-//nice feedback of the todo list
+//Nice feedback of the todo list
 function feedback() {
   let tasks = {}
   let ratio = {}
@@ -92,14 +92,20 @@ function feedback() {
 }
 feedback()
 
-//setup global vars
+//Setup global vars
 let renderStack = []
 
-//setup canvas
+//Setup canvas
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 
-//make the canvas always fill the screen
+let vieport = {
+  x: 0,
+  y: 0,
+  size: 500
+}
+
+//Make the canvas always fill the screen
 function resize() {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
@@ -107,12 +113,116 @@ function resize() {
 window.onresize = resize
 resize()
 
-//the main loop
+//Do the rendering
+function render(inputOptions) {
+  ctx.fillStyle = 'rgb(50,50,50)'
+  ctx.fillRect(0,0,canvas.width,canvas.height)
+
+  //Set options
+  let options = {
+    ...inputOptions
+  }
+
+  //sort the stack by stage
+  renderStack.sort(function(a,b){a.stage-b.stage})
+  
+  /*
+
+  {
+    stage : 5.2
+    translated : false || true 
+    size : 100 (if not translated)
+    path : [{x:0,y:0},{x:0,y:1},{x:1,y:1},{x:1,y:0,jump:true}]
+    mode : fill || line
+    color : [255,100,0,.5]
+    lineWidth : .25 (only needed if mode == line)
+    x : 100 (if not translated)
+    y : 100 (if not translated)
+  }
+
+  */
+
+  for (let index in renderStack) {
+    const block = renderStack[index]
+    ctx.beginPath()
+    for (let pointIndex in block.path) {
+      let point = block.path[pointIndex]
+      if (!block.translated) {
+        //translate the point
+
+        point.x *= 100
+        point.y *= 100
+
+        point.x += block.x
+        point.y += block.y
+
+        point.x += vieport.x
+        point.y += vieport.y
+      }
+      if (point.jump) {
+        ctx.moveTo(point.x, point.y)
+      } else {
+        ctx.lineTo(point.x, point.y)
+      }
+    }
+    const color = block.color
+    if (block.mode == "fill") {
+      ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
+      ctx.fill()
+    } else {
+      ctx.strokeStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
+      ctx.lineWidth = block.lineWidth
+      ctx.stroke()
+    }
+  }
+}
+
+function temp() {
+  renderStack = []
+  renderStack.push({
+    stage : 5.2,
+    translated : true,
+    path : [{x:0,y:0},{x:0,y:250},{x:250,y:250},{x:250,y:0}],
+    mode : "fill",
+    color : [255,100,0,.5],
+  })
+  renderStack.push({
+    stage : 3.2,
+    translated : false,
+    size : 100,
+    path : [{x:0,y:0},{x:0,y:1},{x:1,y:1,jump:true},{x:1,y:0}],
+    mode : "line",
+    color : [255,100,255,.5],
+    lineWidth : 25,
+    x : 500,
+    y : 500
+  })
+  renderStack.push({
+    stage : -.3,
+    translated : false,
+    size : 100,
+    path : [{x:0.4,y:0},{x:0.6,y:0},{x:0.8,y:0.1},{x:0.9,y:0.2},{x:1,y:0.4},{x:1,y:0.6},{x:0.9,y:0.8},{x:0.8,y:0.9},{x:0.6,y:1},{x:0.4,y:1},{x:0.2,y:0.9},{x:0.1,y:0.8},{x:0,y:0.6},{x:0,y:0.4},{x:0.1,y:0.2},{x:0.2,y:0.1}],
+    mode : "fill",
+    color : [0,100,0,.5],
+    x : 0,
+    y : 500
+  })
+
+
+  vieport.x = Math.sin(Date.now()/1000)*500
+}
+
+
+
+//The main loop
 let [lastTime, updateindex] = [0, 0]
 function update(inputTime) {
   const deltaTime = inputTime - lastTime
   lastTime = inputTime
   
+  temp()
+  render()
+
   //start the next loop
   updateindex++
   requestAnimationFrame(update)
