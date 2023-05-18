@@ -14,6 +14,7 @@ const todo = {
   "Add gamepad joystick inputs" : "Planned",
   "Start a modular menu system" : "Done",
   "Make the corners cut" : "Done",
+  "Make a function to squeez text in a box" : "Planned",
   "Add titles to the menues" : "Planned",
   "Add buttons to the menu" : "Planned",
   "Detect when the mouse is over an button in the menu" : "Planned",
@@ -177,22 +178,22 @@ getPlayerInputs()
 let menu = {
   stage: 10,
   size: {
-      x: 300,
-      y: 300
+      x: 500,
+      y: 500
   },
   location: {
       x: 100,
       y: 100
   },
   draggable: false,
-  backgroundColor: [100,0,0,.5],
+  backgroundColor: [0,0,0,.75],
   border: {
       width: .1,
-      color: [0,255,0]
+      color: [50,50,50,.75]
   },
   title: {
       text: "I'm a title!",
-      color: [0,0,0],
+      color: [0,0,100],
       size: .3
   },
   padding: 25,
@@ -238,25 +239,28 @@ function render(inputOptions) {
   //turn the menu into render stack entries
   function stackMenus() {
     let currentMenu = menu
-    let size = currentMenu.size
     let count = currentMenu.buttons.length
+    let size = currentMenu.size
     let width = size.x
     let height = size.y
 
-    let path = []
-    let location = currentMenu.location
 
-    path.push({x: location.x,y: location.y + size.y * .1})
-    path.push({x: location.x + size.x * .1,y: location.y})
+    function cutCorners(x,y,width,height) {
+      let path = []
+      path.push({x: x,y: y + height * .1})
+      path.push({x: x + width * .1,y: y})
+      path.push({x: x + width * .9, y: y})
+      path.push({x: x + width, y: y + height * .1})
+      path.push({x: x + width, y: y + height * .9})
+      path.push({x: x + width * .9, y: y + height})
+      path.push({x: x + width * .1, y:y + height})
+      path.push({x: x ,y: y + height * .9})
+      path.push({x: x,y: y + height * .1})
+      path.push({x: x + width * .1,y: y})
+      return path
+    }
 
-    path.push({x: location.x + size.x * .9, y: location.y})
-    path.push({x: location.x + size.x, y: location.y + size.y * .1})
-
-    path.push({x: location.x + size.x, y: location.y + size.y * .9})
-    path.push({x: location.x + size.x * .9, y: location.y + size.y})
-
-    path.push({x: location.x + size.x * .1, y:location.y + size.y})
-    path.push({x: location.x ,y: location.y + size.y * .9})
+    let path = cutCorners(currentMenu.location.x,currentMenu.location.y,width,height)
 
     renderStack.push({
       mode: "fill",
@@ -267,17 +271,14 @@ function render(inputOptions) {
     })
 
     if (currentMenu.border) {
-      path.push({x: location.x,y: location.y + size.y * .1})
-      path.push({x: location.x + size.x * .1,y: location.y})  
       renderStack.push({
         mode: "line",
         path: path,
         color: currentMenu.border.color,
         stage: currentMenu.stage,
         translated: true,
-        width: currentMenu.border.width * Math.min(size.x, size.y)
+        lineWidth: currentMenu.border.width * Math.min(size.x, size.y)
       })
-  
     }
 
     //subtrack the title from height
@@ -293,7 +294,6 @@ function render(inputOptions) {
         sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
     }
     sizes.sort(({size: a},{size: b})=> b - a)
-    console.log(sizes[0])
     let colums = sizes[0].cols
     let rows = sizes[0].rowz
     let boxSize = sizes[0].size
