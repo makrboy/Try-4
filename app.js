@@ -6,14 +6,20 @@ const todo = {
   "Setup game loop" : "Done",
   "Create renderstack" : "Done",
   "Add rendering of renderstack" : "Done",
-  "Add different renderstack modes for the gui" : "Done",
+  "Add different renderstack modes for the menu system" : "Done",
   "Add keyboard inputs" : "Done",
   "Add mouse button inputs" : "Done",
   "Add mouse posision inputs" : "Done",
-  "Create a modular GUI" : "Planned",
-  "Add buttons to the GUI" : "Planned",
-  "Add on open / on closed functions for the GUI" : "Planned",
-  "Make GUIs draggable" : "Planned",
+  "Add gamepad button inputs" : "Planned",
+  "Add gamepad joystick inputs" : "Planned",
+  "Start a modular menu system" : "Done",
+  "Make the corners cut" : "Done",
+  "Add titles to the menues" : "Planned",
+  "Add buttons to the menu" : "Planned",
+  "Detect when the mouse is over an button in the menu" : "Planned",
+  "Make the buttons clickable" : "Planned",
+  "Add on open / on closed functions for the menu" : "Planned",
+  "Make menus draggable" : "Planned",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
   "Add support for convex shapes" : "Planned",
@@ -168,82 +174,204 @@ function getPlayerInputs() {
 }
 getPlayerInputs()
 
+let menu = {
+  stage: 10,
+  size: {
+      x: 300,
+      y: 300
+  },
+  location: {
+      x: 100,
+      y: 100
+  },
+  draggable: false,
+  backgroundColor: [100,0,0,.5],
+  border: {
+      width: .1,
+      color: [0,255,0]
+  },
+  title: {
+      text: "I'm a title!",
+      color: [0,0,0],
+      size: .3
+  },
+  padding: 25,
+  buttons: [
+      {
+          border: {
+              width: .1,
+              color: [255,0,0,.2]
+          },
+          color: [0,0,255],
+          title: {
+              text: "I'm a title!",
+              color: [0,0,0]
+          },
+          functions: {
+              onHover: function(self) {},
+              onClick: function(self) {}
+          }
+      }
+  ],
+  functions: {
+      onOpen: function(self) {},
+      onClose: function(self) {},
+      onResize: function(self) {}
+  }
+}
+
 //Do the rendering
 function render(inputOptions) {
 
-  //clear the screen and set the background
-  ctx.fillStyle = `rgb(30,30,30,${backgroundTransparency})`
-  ctx.fillRect(0,0,canvas.width,canvas.height)
+    //Set options
+    let options = {
+      ...inputOptions
+    }  
 
-  //Set options
-  let options = {
-    ...inputOptions
+  //clear the screen
+  function clear() {
+    //clear the screen and set the background
+    ctx.fillStyle = `rgb(30,30,30,${backgroundTransparency})`
+    ctx.fillRect(0,0,canvas.width,canvas.height)
   }
 
-  //sort the stack by stage
-  renderStack.sort(function(a,b){a.stage-b.stage})
+  //turn the menu into render stack entries
+  function stackMenus() {
+    let currentMenu = menu
+    let size = currentMenu.size
+    let count = currentMenu.buttons.length
+    let width = size.x
+    let height = size.y
+
+    let path = []
+    let location = currentMenu.location
+
+    path.push({x: location.x,y: location.y + size.y * .1})
+    path.push({x: location.x + size.x * .1,y: location.y})
+
+    path.push({x: location.x + size.x * .9, y: location.y})
+    path.push({x: location.x + size.x, y: location.y + size.y * .1})
+
+    path.push({x: location.x + size.x, y: location.y + size.y * .9})
+    path.push({x: location.x + size.x * .9, y: location.y + size.y})
+
+    path.push({x: location.x + size.x * .1, y:location.y + size.y})
+    path.push({x: location.x ,y: location.y + size.y * .9})
+
+    renderStack.push({
+      mode: "fill",
+      path: path,
+      color: currentMenu.backgroundColor,
+      stage: currentMenu.stage,
+      translated: true
+    })
+
+    if (currentMenu.border) {
+      path.push({x: location.x,y: location.y + size.y * .1})
+      path.push({x: location.x + size.x * .1,y: location.y})  
+      renderStack.push({
+        mode: "line",
+        path: path,
+        color: currentMenu.border.color,
+        stage: currentMenu.stage,
+        translated: true,
+        width: currentMenu.border.width * Math.min(size.x, size.y)
+      })
   
-  //the scale to use to make stuff thats supposed to fill the screen does it right
-  const scale = Math.min(canvas.width,canvas.height)
-
-  //go block by block in the render stack
-  for (let index in renderStack) {
-    const block = renderStack[index]
-
-    //start the path
-    ctx.beginPath()
-
-    //if the line needs scaling do it here
-    if ((!block.translated) && block.mode == "line") {
-      block.lineWidth *= block.size
-      block.lineWidth /= vieport.size
-      block.lineWidth *= scale
     }
 
-    //then point by point
-    for (let pointIndex in block.path) {
-      let point = block.path[pointIndex]
+    //subtrack the title from height
 
-      //translate the point if needed
-      if (!block.translated) {
-        point.x *= block.size
-        point.y *= block.size
+    //calculate how big the boxes can be, as well as how to arrange them
+    const sizes = []
+    for (let i = 1; i <= count; i++) {
+        let cols = i
+        let rowz = Math.ceil(count / i)
+        sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
+        rowz = i
+        cols = Math.ceil(count / i)
+        sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
+    }
+    sizes.sort(({size: a},{size: b})=> b - a)
+    console.log(sizes[0])
+    let colums = sizes[0].cols
+    let rows = sizes[0].rowz
+    let boxSize = sizes[0].size
+  }
+  
 
-        point.x += block.x
-        point.y += block.y
+  //render the render stack
+  function renderRenderStack() {
 
-        point.x -= vieport.x
-        point.y -= vieport.y
+    //sort the stack by stage
+    renderStack.sort(function(a,b){a.stage-b.stage})
+    
+    //the scale to use to make stuff thats supposed to fill the screen does it right
+    const scale = Math.min(canvas.width,canvas.height)
 
-        point.x /= vieport.size
-        point.y /= vieport.size
+    //go block by block in the render stack
+    for (let index in renderStack) {
+      const block = renderStack[index]
 
-        point.x *= scale
-        point.y *= scale
+      //start the path
+      ctx.beginPath()
 
+      //if the line needs scaling do it here
+      if ((!block.translated) && block.mode == "line") {
+        block.lineWidth *= block.size
+        block.lineWidth /= vieport.size
+        block.lineWidth *= scale
       }
 
-      //if the point jumps do a moveTo instead of lineTo (mainly for lines that don't always connect)
-      if (point.jump) {
-        ctx.moveTo(point.x, point.y)
+      //then point by point
+      for (let pointIndex in block.path) {
+        let point = block.path[pointIndex]
+
+        //translate the point if needed
+        if (!block.translated) {
+          point.x *= block.size
+          point.y *= block.size
+
+          point.x += block.x
+          point.y += block.y
+
+          point.x -= vieport.x
+          point.y -= vieport.y
+
+          point.x /= vieport.size
+          point.y /= vieport.size
+
+          point.x *= scale
+          point.y *= scale
+
+        }
+
+        //if the point jumps do a moveTo instead of lineTo (mainly for lines that don't always connect)
+        if (point.jump) {
+          ctx.moveTo(point.x, point.y)
+        } else {
+          ctx.lineTo(point.x, point.y)
+        }
+      }
+
+      //set the color to a var so I don't call it 4 times
+      const color = block.color
+
+      //fill or stroke as needed
+      if (block.mode == "fill") {
+        ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
+        ctx.fill()
       } else {
-        ctx.lineTo(point.x, point.y)
+        ctx.strokeStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
+        ctx.lineWidth = block.lineWidth
+        ctx.stroke()
       }
-    }
-
-    //set the color to a var so I don't call it 4 times
-    const color = block.color
-
-    //fill or stroke as needed
-    if (block.mode == "fill") {
-      ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
-      ctx.fill()
-    } else {
-      ctx.strokeStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
-      ctx.lineWidth = block.lineWidth
-      ctx.stroke()
     }
   }
+
+  clear()
+  stackMenus()
+  renderRenderStack()
 }
 
 function temp() {
