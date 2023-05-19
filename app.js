@@ -14,7 +14,8 @@ const todo = {
   "Add gamepad joystick inputs" : "Planned",
   "Start a modular menu system" : "Done",
   "Make the corners cut" : "Done",
-  "Make a function to squeez text in a box" : "Planned",
+  "Make the renderStack support text" : "Done",
+  "Make a function to squeez text in a box" : "In Progress",
   "Add titles to the menues" : "Planned",
   "Add buttons to the menu" : "Planned",
   "Detect when the mouse is over an button in the menu" : "Planned",
@@ -176,6 +177,7 @@ function getPlayerInputs() {
 getPlayerInputs()
 
 let menu = {
+  cutCorners: true,
   stage: 10,
   size: {
       x: 500,
@@ -224,10 +226,13 @@ let menu = {
 //Do the rendering
 function render(inputOptions) {
 
-    //Set options
-    let options = {
+  //only set baseline once
+  ctx.textBaseline = "top"
+
+  //Set options
+  let options = {
       ...inputOptions
-    }  
+  }  
 
   //clear the screen
   function clear() {
@@ -243,8 +248,14 @@ function render(inputOptions) {
     let size = currentMenu.size
     let width = size.x
     let height = size.y
+    let location = currentMenu.location
+    let path
 
+    function fitText(text, x, y, width, height, font) {
+    }
+    fitText()
 
+    //takes the posisiton and size of a box and returns a path to the same box with its corner cut
     function cutCorners(x,y,width,height) {
       let path = []
       path.push({x: x,y: y + height * .1})
@@ -260,8 +271,22 @@ function render(inputOptions) {
       return path
     }
 
-    let path = cutCorners(currentMenu.location.x,currentMenu.location.y,width,height)
+    //get a nice corner cut box if cutCorners is true
+    if (!currentMenu.cutCorners) {
+      path = cutCorners(location.x,location.y,width,height)
+    } else {
+      
+      //or just a rectangle
+      path = []
+      path.push({x: location.x, y: location.y})
+      path.push({x: location.x + width, y: location.y})
+      path.push({x: location.x + width, y: location.y + height})
+      path.push({x: location.x, y: location.y + height})
+      path.push({x: location.x, y: location.y})
+      path.push({x: location.x + width, y: location.y})
+    }
 
+    //add the background of the menu
     renderStack.push({
       mode: "fill",
       path: path,
@@ -270,6 +295,7 @@ function render(inputOptions) {
       translated: true
     })
 
+    //if the menu has a border add it
     if (currentMenu.border) {
       renderStack.push({
         mode: "line",
@@ -313,65 +339,81 @@ function render(inputOptions) {
     for (let index in renderStack) {
       const block = renderStack[index]
 
-      //start the path
-      ctx.beginPath()
+      //ignore if on text mode
+      if (block.mode !== "text") {
+        //start the path
+        ctx.beginPath()
 
-      //if the line needs scaling do it here
-      if ((!block.translated) && block.mode == "line") {
-        block.lineWidth *= block.size
-        block.lineWidth /= vieport.size
-        block.lineWidth *= scale
-      }
-
-      //then point by point
-      for (let pointIndex in block.path) {
-        let point = block.path[pointIndex]
-
-        //translate the point if needed
-        if (!block.translated) {
-          point.x *= block.size
-          point.y *= block.size
-
-          point.x += block.x
-          point.y += block.y
-
-          point.x -= vieport.x
-          point.y -= vieport.y
-
-          point.x /= vieport.size
-          point.y /= vieport.size
-
-          point.x *= scale
-          point.y *= scale
-
+        //if the line needs scaling do it here
+        if ((!block.translated) && block.mode == "line") {
+          block.lineWidth *= block.size
+          block.lineWidth /= vieport.size
+          block.lineWidth *= scale
         }
 
-        //if the point jumps do a moveTo instead of lineTo (mainly for lines that don't always connect)
-        if (point.jump) {
-          ctx.moveTo(point.x, point.y)
-        } else {
-          ctx.lineTo(point.x, point.y)
+        //then point by point
+        for (let pointIndex in block.path) {
+          let point = block.path[pointIndex]
+
+          //translate the point if needed
+          if (!block.translated) {
+            point.x *= block.size
+            point.y *= block.size
+
+            point.x += block.x
+            point.y += block.y
+
+            point.x -= vieport.x
+            point.y -= vieport.y
+
+            point.x /= vieport.size
+            point.y /= vieport.size
+
+            point.x *= scale
+            point.y *= scale
+
+          }
+
+          //if the point jumps do a moveTo instead of lineTo (mainly for lines that don't always connect)
+          if (point.jump) {
+            ctx.moveTo(point.x, point.y)
+          } else {
+            ctx.lineTo(point.x, point.y)
+          }
         }
       }
 
       //set the color to a var so I don't call it 4 times
-      const color = block.color
+      let color = `rgb(${block.color[0]},${block.color[1]},${block.color[2]},${block.color[3] || 1})`
 
-      //fill or stroke as needed
+      //fill, stroke, or text as needed
       if (block.mode == "fill") {
-        ctx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
+        ctx.fillStyle = color
         ctx.fill()
-      } else {
-        ctx.strokeStyle = `rgb(${color[0]},${color[1]},${color[2]},${color[3] || 1})`
+      } else if (block.mode == "line") {
+        ctx.strokeStyle = color
         ctx.lineWidth = block.lineWidth
         ctx.stroke()
-      }
+      } else if (block.mode == "text") {
+        ctx.fillStyle = color
+        ctx.font = `${block.size}px ${block.font}`
+        ctx.fillText(block.text,block.x,block.y)
+      } 
     }
   }
 
   clear()
   stackMenus()
   renderRenderStack()
+
+  ctx.lineWidth = 10
+  ctx.font = `250px Arial`
+  const text = "QpoPH!0!"
+  const temp = ctx.measureText(text)
+  ctx.textBaseline = "top"
+  ctx.strokeText("Hello",300,200, 10000)
+  ctx.fillText(text,0,0)
+
 }
 
 function temp() {
@@ -405,7 +447,16 @@ function temp() {
     x : 0,
     y : 500
   })
-
+  renderStack.push({
+    stage: 11,
+    size: 50,
+    mode: "text",
+    color: [0,255,255],
+    x: 100,
+    y: 700,
+    font: "Arial",
+    text: "Hello. World!"
+  })
 
   vieport.x = Math.abs(Math.sin(Date.now()/2000)*500)
 }
