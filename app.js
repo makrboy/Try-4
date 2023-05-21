@@ -12,9 +12,11 @@ const todo = {
   "Add mouse posision inputs" : "Done",
   "Add gamepad button inputs" : "Planned",
   "Add gamepad joystick inputs" : "Planned",
+  "Add mousewheel inputs" : "Planned",
   "Start a modular menu system" : "Done",
   "Make the corners cut" : "Done",
   "Make the renderStack support text" : "Done",
+  "Add support for scaling renderStack text" : "Planned",
   "Make a function to squeez text in a box" : "In Progress",
   "Add titles to the menues" : "Planned",
   "Add buttons to the menu" : "Planned",
@@ -252,8 +254,46 @@ function render(inputOptions) {
     let path
 
     function fitText(text, x, y, width, height, font) {
+      let size = 100
+      const measureSize = 100
+      ctx.font = `${measureSize}px ${font}`
+      const words = text.split(" ")
+      words.push(" ")
+      let wordWidths = {}
+      for (let wordIndex in words) {
+        const word = words[wordIndex]
+        const wordWidth = ctx.measureText(word)
+        wordWidths[word] = wordWidth.width / measureSize
+      }
+      console.log("Start")
+      function calculate() {
+        let spaces, lines
+        let length = Infinity
+        let wordsToDo = words
+
+        let breakIndex = 0
+        let index = 0
+        while (breakIndex < 100) {
+          breakIndex++
+
+          if (length + wordWidths[wordsToDo[index]] * size > width) {
+            size /= 2
+            spaces = lines = []
+            length = 0
+            wordsToDo = words
+            console.log("Retry")
+          } else {
+
+            lines[index] += wordsToDo[index]
+            length += wordWidths[wordsToDo[index]] * size
+          }
+        }
+        console.log(length)
+
+      }
+      calculate()
     }
-    fitText()
+    fitText("Hello world, I am a text box!", 100, 100, 300, 300, "Arial")
 
     //takes the posisiton and size of a box and returns a path to the same box with its corner cut
     function cutCorners(x,y,width,height) {
@@ -405,15 +445,6 @@ function render(inputOptions) {
   clear()
   stackMenus()
   renderRenderStack()
-
-  ctx.lineWidth = 10
-  ctx.font = `250px Arial`
-  const text = "QpoPH!0!"
-  const temp = ctx.measureText(text)
-  ctx.textBaseline = "top"
-  ctx.strokeText("Hello",300,200, 10000)
-  ctx.fillText(text,0,0)
-
 }
 
 function temp() {
