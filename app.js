@@ -17,7 +17,7 @@ const todo = {
   "Make the corners cut" : "Done",
   "Make the renderStack support text" : "Done",
   "Add support for scaling renderStack text" : "Planned",
-  "Make a function to squeez text in a box" : "In Progress",
+  "Make a function to squeez text in a box" : "Done",
   "Add titles to the menues" : "Planned",
   "Add buttons to the menu" : "Planned",
   "Detect when the mouse is over an button in the menu" : "Planned",
@@ -254,15 +254,14 @@ function render(inputOptions) {
     let location = currentMenu.location
     let path
 
-    function fitText(text, x, y, width, height, font) {
+    function fitText(text, x, y, width, height, stage, color, font) {
       let size = 1000
       const measureSize = 250
       ctx.font = `${measureSize}px ${font}`
       const words = text.split(" ")
-      words.push(" ")
       let wordWidths = {}
-      for (let wordIndex in words) {
-        const word = words[wordIndex]
+      for (let wordIndex = 0; wordIndex < words.length + 1; wordIndex++) {
+        const word = words[wordIndex] || " "
         const wordWidth = ctx.measureText(word)
         wordWidths[word] = wordWidth.width / measureSize
       }
@@ -271,82 +270,76 @@ function render(inputOptions) {
       let currentLine = ""
       let length = 0
       let index = 0
+      while (true) {
 
-      let breakIndex = 0
-      while (breakIndex < 100000) {
-        breakIndex++
+        //if the lines take up too much hight
+        if ((lines.length + (currentLine == "" ? 0 : 1)) * size > height) {
+          size *= .9
+          lines = []
+          lengths = []
+          currentLine = ""
+          length = 0
+          index = 0        
+        }        
 
         //there are no more words
-        if (!words[index]) {
+        else if (!words[index]) {
           lines.push(currentLine)
+          lengths.push(length)
           break
-        } else {
+        }
+        //if currentLine in empty
+        else if (currentLine == "") {
 
-          //if the lines take up too much hight
-          if ((lines.length + (currentLine == "" ? 0 : 1)) * size > height) {
-          //if (false) {
-            size *= .95
+          //if adding a word makes the line too long
+          if (wordWidths[words[index]] * size > width) {
+            size *= .9
             lines = []
             lengths = []
             currentLine = ""
             length = 0
             index = 0        
-        }
+          } else {
 
-          //if currentLine in empty
-          else if (currentLine == "") {
-
-            //if adding a word makes the line too long
-            if (wordWidths[words[index]] * size > width) {
-              size *= .95
-              lines = []
-              lengths = []
-              currentLine = ""
-              length = 0
-              index = 0        
-            }
-
-            //if adding a word does not make the line too long
-            else if (wordWidths[words[index]] * size <= width) {
-              currentLine = words[index]
-              length = wordWidths[words[index]] * size
-              index++
-            }
-          }
-
-          //if currentLine has something in it
-          else if (currentLine !== "") {
-
-            //if adding a word and a space makes the line too long
-            if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
-              lines.push(currentLine)
-              length = 0
-              currentLine = ""
-            }
-
-            //if adding a word and a space does not make the line too long
-            else if (length + (wordWidths[words[index]] + wordWidths[" "]) * size <= width) {
-              currentLine += " " + words[index]
-              length += (wordWidths[words[index]] + wordWidths[" "]) * size
-              index++
-            }
+          //if adding a word does not make the line too long
+            currentLine = words[index]
+            length = wordWidths[words[index]] * size
+            index++
           }
         }
+
+        //if currentLine has something in it
+        else if (currentLine !== "") {
+
+          //if adding a word and a space makes the line too long
+          if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
+            lines.push(currentLine)
+            lengths.push(length)
+            length = 0
+            currentLine = ""
+          } else {
+
+          //if adding a word and a space does not make the line too long
+            currentLine += " " + words[index]
+            length += (wordWidths[words[index]] + wordWidths[" "]) * size
+            index++
+          }
+      }
       }
       for (let index in lines) {
         renderStack.push({
-          stage: 15,
+          stage: stage,
           size: size,
           mode: "text",
-          color: [0,255,0],
-          x: x,
+          color: color,
+          x: x + (width - lengths[index]) / 2,
           y: y + index * size,
-          font: "Arial",
+          font: font,
           text: lines[index]
         })      
       }
     }
-    fitText("Hello, I am a text box! 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 ", 0, 0, 250, 250, "Arial")
+    fitText("Hello, I am a text box! 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22", 0, 0, 250, 250, 15, [0,200,0], "Arial")
 
     //takes the posisiton and size of a box and returns a path to the same box with its corner cut
     function cutCorners(x,y,width,height) {
