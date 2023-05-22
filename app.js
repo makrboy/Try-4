@@ -268,86 +268,74 @@ function render(inputOptions) {
       }
       console.log("-----START-----")
       function calculate() {
+
         let lines = []
+        let lengths = []
+        let currentLine = ""
         let length = 0
         let index = 0
-        let currentLine = ""
 
         let breakIndex = 0
         while (breakIndex < 1000) {
           breakIndex++
 
-          //if there are no more words
+          //there are no more words
           if (!words[index]) {
-            console.log("Done")
             lines.push(currentLine)
-            currentLine = ""
             break
-          }
+          } else {
 
-          //if the words fall off the bottom
-          if ((index * size) > width) {
-            console.log("Height overflow")
-            console.log("lines:"+JSON.stringify(lines)+
-            "\nlength:"+length+"\nindex:"+index+"\ncurrentLine:"+currentLine)
-            size *= .9
-            lines = []
-            index = 0
-            length = 0
-            currentLine = ""
-          }
+            //if the lines take up too much hight
+            if (index * size > height) {
+              size *= .9
+              let lines = []
+              let lengths = []
+              let currentLine = ""
+              let length = 0
+              let index = 0        
+            }
 
-          //if one word line does not fit
-          if (length == 0 && wordWidths[words[index]] * size > width) {
-            console.log("Single break")
-            size *= .9
-            lines = []
-            index = 0
-            length = 0
-            currentLine = ""
-          }
+            //if currentLine in empty
+            else if (currentLine == "") {
 
-          //if one word line fits
-          if (length == 0 && wordWidths[words[index]] * size <= width) {
-            console.log("Single fit")
-            currentLine = words[index]
-            length += wordWidths[words[index]] * size
-            index++
-          }
+              //if adding a word makes the line too long
+              if (wordWidths[words[index]] * size > width) {
+                size *= .9
+                let lines = []
+                let currentLine = ""
+                let length = 0
+                let index = 0        
+              }
 
-          //if multi line does not fit
-          if (length > 0 && (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
-            console.log("Multi break")
-            lines.push(currentLine)
-            currentLine = ""
-            length = 0
-          }
+              //if adding a word does not make the line too long
+              else if (wordWidths[words[index]] * size <= width) {
+                currentLine = words[index]
+                length = wordWidths[words[index]] * size
+                index++
+              }
+            }
 
-          //if multi line fits
-          if (length > 0 && (wordWidths[words[index]] + wordWidths[" "]) * size <= width) {
-            console.log("Multi fit")
-            currentLine += " " + words[index]
-            length += (wordWidths[words[index]] + wordWidths[" "]) * size
-            index++
-          }
+            //if currentLine has something in it
+            else if (currentLine !== "") {
 
-          //todo
-          //check if the words fall off the bottom
+              //if adding a word and a space makes the line too long
+              if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
+                lines.push(currentLine)
+                length = 0
+                currentLine = ""
+              }
+
+              //if adding a word and a space does not make the line too long
+              else if (length + (wordWidths[words[index]] + wordWidths[" "]) * size <= width) {
+                currentLine += " " + words[index]
+                length += (wordWidths[words[index]] + wordWidths[" "]) * size
+                index++
+              }
+            }
+          }
         }
+
         console.log(lines)
-        console.log(size)
-        for (let index in lines) {
-          renderStack.push({
-            stage: 10,
-            size: size,
-            mode: "text",
-            color: [0,255,255],
-            x: x,
-            y: y + index * size,
-            font: font,
-            text: lines[index]
-          })
-                }
       }
       calculate()
     }
