@@ -267,77 +267,85 @@ function render(inputOptions) {
         wordWidths[word] = wordWidth.width / measureSize
       }
       console.log("-----START-----")
-      function calculate() {
 
-        let lines = []
-        let lengths = []
-        let currentLine = ""
-        let length = 0
-        let index = 0
+      let lines = []
+      let lengths = []
+      let currentLine = ""
+      let length = 0
+      let index = 0
 
-        let breakIndex = 0
-        while (breakIndex < 1000) {
-          breakIndex++
+      let breakIndex = 0
+      while (breakIndex < 1000) {
+        breakIndex++
 
-          //there are no more words
-          if (!words[index]) {
-            lines.push(currentLine)
-            break
-          } else {
+        //there are no more words
+        if (!words[index]) {
+          lines.push(currentLine)
+          break
+        } else {
 
-            //if the lines take up too much hight
-            if (index * size > height) {
+          //if the lines take up too much hight
+          if (index * size > height) {
+            size *= .9
+            let lines = []
+            let lengths = []
+            let currentLine = ""
+            let length = 0
+            let index = 0        
+          }
+
+          //if currentLine in empty
+          else if (currentLine == "") {
+
+            //if adding a word makes the line too long
+            if (wordWidths[words[index]] * size > width) {
               size *= .9
               let lines = []
-              let lengths = []
               let currentLine = ""
               let length = 0
               let index = 0        
             }
 
-            //if currentLine in empty
-            else if (currentLine == "") {
+            //if adding a word does not make the line too long
+            else if (wordWidths[words[index]] * size <= width) {
+              currentLine = words[index]
+              length = wordWidths[words[index]] * size
+              index++
+            }
+          }
 
-              //if adding a word makes the line too long
-              if (wordWidths[words[index]] * size > width) {
-                size *= .9
-                let lines = []
-                let currentLine = ""
-                let length = 0
-                let index = 0        
-              }
+          //if currentLine has something in it
+          else if (currentLine !== "") {
 
-              //if adding a word does not make the line too long
-              else if (wordWidths[words[index]] * size <= width) {
-                currentLine = words[index]
-                length = wordWidths[words[index]] * size
-                index++
-              }
+            //if adding a word and a space makes the line too long
+            if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
+              lines.push(currentLine)
+              length = 0
+              currentLine = ""
             }
 
-            //if currentLine has something in it
-            else if (currentLine !== "") {
-
-              //if adding a word and a space makes the line too long
-              if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
-                lines.push(currentLine)
-                length = 0
-                currentLine = ""
-              }
-
-              //if adding a word and a space does not make the line too long
-              else if (length + (wordWidths[words[index]] + wordWidths[" "]) * size <= width) {
-                currentLine += " " + words[index]
-                length += (wordWidths[words[index]] + wordWidths[" "]) * size
-                index++
-              }
+            //if adding a word and a space does not make the line too long
+            else if (length + (wordWidths[words[index]] + wordWidths[" "]) * size <= width) {
+              currentLine += " " + words[index]
+              length += (wordWidths[words[index]] + wordWidths[" "]) * size
+              index++
             }
           }
         }
-
-        console.log(lines)
       }
-      calculate()
+      for (let index in lines) {
+        renderStack.push({
+          stage: 15,
+          size: size,
+          mode: "text",
+          color: [0,255,0],
+          x: x,
+          y: y + index * size,
+          font: "Arial",
+          text: lines[index]
+        })      
+      }
+      console.log(lines)
     }
     fitText("Hello world, I am a text box!", 0, 0, 300, 300, "Arial")
 
@@ -416,7 +424,7 @@ function render(inputOptions) {
   function renderRenderStack() {
 
     //sort the stack by stage
-    renderStack.sort(function(a,b){a.stage-b.stage})
+    renderStack.sort(function(a,b){return a.stage-b.stage})
     
     //the scale to use to make stuff thats supposed to fill the screen does it right
     const scale = Math.min(canvas.width,canvas.height)
