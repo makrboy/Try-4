@@ -230,6 +230,7 @@ function render(inputOptions) {
 
   //only set baseline once
   ctx.textBaseline = "top"
+  ctx.textAlign = "left"
 
   //Set options
   let options = {
@@ -254,8 +255,8 @@ function render(inputOptions) {
     let path
 
     function fitText(text, x, y, width, height, font) {
-      let size = 100
-      const measureSize = 100
+      let size = 1000
+      const measureSize = 250
       ctx.font = `${measureSize}px ${font}`
       const words = text.split(" ")
       words.push(" ")
@@ -265,35 +266,92 @@ function render(inputOptions) {
         const wordWidth = ctx.measureText(word)
         wordWidths[word] = wordWidth.width / measureSize
       }
-      console.log("Start")
+      console.log("-----START-----")
       function calculate() {
-        let spaces, lines
-        let length = Infinity
-        let wordsToDo = words
+        let lines = []
+        let length = 0
+        let index = 0
+        let currentLine = ""
 
         let breakIndex = 0
-        let index = 0
-        while (breakIndex < 100) {
+        while (breakIndex < 1000) {
           breakIndex++
 
-          if (length + wordWidths[wordsToDo[index]] * size > width) {
-            size /= 2
-            spaces = lines = []
-            length = 0
-            wordsToDo = words
-            console.log("Retry")
-          } else {
-
-            lines[index] += wordsToDo[index]
-            length += wordWidths[wordsToDo[index]] * size
+          //if there are no more words
+          if (!words[index]) {
+            console.log("Done")
+            lines.push(currentLine)
+            currentLine = ""
+            break
           }
-        }
-        console.log(length)
 
+          //if the words fall off the bottom
+          if ((index * size) > width) {
+            console.log("Height overflow")
+            console.log("lines:"+JSON.stringify(lines)+
+            "\nlength:"+length+"\nindex:"+index+"\ncurrentLine:"+currentLine)
+            size *= .9
+            lines = []
+            index = 0
+            length = 0
+            currentLine = ""
+          }
+
+          //if one word line does not fit
+          if (length == 0 && wordWidths[words[index]] * size > width) {
+            console.log("Single break")
+            size *= .9
+            lines = []
+            index = 0
+            length = 0
+            currentLine = ""
+          }
+
+          //if one word line fits
+          if (length == 0 && wordWidths[words[index]] * size <= width) {
+            console.log("Single fit")
+            currentLine = words[index]
+            length += wordWidths[words[index]] * size
+            index++
+          }
+
+          //if multi line does not fit
+          if (length > 0 && (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
+            console.log("Multi break")
+            lines.push(currentLine)
+            currentLine = ""
+            length = 0
+          }
+
+          //if multi line fits
+          if (length > 0 && (wordWidths[words[index]] + wordWidths[" "]) * size <= width) {
+            console.log("Multi fit")
+            currentLine += " " + words[index]
+            length += (wordWidths[words[index]] + wordWidths[" "]) * size
+            index++
+          }
+
+          //todo
+          //check if the words fall off the bottom
+        }
+        console.log(lines)
+        console.log(size)
+        for (let index in lines) {
+          renderStack.push({
+            stage: 10,
+            size: size,
+            mode: "text",
+            color: [0,255,255],
+            x: x,
+            y: y + index * size,
+            font: font,
+            text: lines[index]
+          })
+                }
       }
       calculate()
     }
-    fitText("Hello world, I am a text box!", 100, 100, 300, 300, "Arial")
+    fitText("Hello world, I am a text box!", 0, 0, 300, 300, "Arial")
 
     //takes the posisiton and size of a box and returns a path to the same box with its corner cut
     function cutCorners(x,y,width,height) {
@@ -347,7 +405,7 @@ function render(inputOptions) {
       })
     }
 
-    //subtrack the title from height
+    //TODO subtrack the title from height
 
     //calculate how big the boxes can be, as well as how to arrange them
     const sizes = []
