@@ -266,8 +266,6 @@ function render(inputOptions) {
         const wordWidth = ctx.measureText(word)
         wordWidths[word] = wordWidth.width / measureSize
       }
-      console.log("-----START-----")
-
       let lines = []
       let lengths = []
       let currentLine = ""
@@ -275,7 +273,7 @@ function render(inputOptions) {
       let index = 0
 
       let breakIndex = 0
-      while (breakIndex < 1000) {
+      while (breakIndex < 100000) {
         breakIndex++
 
         //there are no more words
@@ -285,25 +283,27 @@ function render(inputOptions) {
         } else {
 
           //if the lines take up too much hight
-          if (index * size > height) {
-            size *= .9
-            let lines = []
-            let lengths = []
-            let currentLine = ""
-            let length = 0
-            let index = 0        
-          }
+          if ((lines.length + (currentLine == "" ? 0 : 1)) * size > height) {
+          //if (false) {
+            size *= .95
+            lines = []
+            lengths = []
+            currentLine = ""
+            length = 0
+            index = 0        
+        }
 
           //if currentLine in empty
           else if (currentLine == "") {
 
             //if adding a word makes the line too long
             if (wordWidths[words[index]] * size > width) {
-              size *= .9
-              let lines = []
-              let currentLine = ""
-              let length = 0
-              let index = 0        
+              size *= .95
+              lines = []
+              lengths = []
+              currentLine = ""
+              length = 0
+              index = 0        
             }
 
             //if adding a word does not make the line too long
@@ -345,9 +345,8 @@ function render(inputOptions) {
           text: lines[index]
         })      
       }
-      console.log(lines)
     }
-    fitText("Hello world, I am a text box!", 0, 0, 300, 300, "Arial")
+    fitText("Hello, I am a text box! 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 ", 0, 0, 250, 250, "Arial")
 
     //takes the posisiton and size of a box and returns a path to the same box with its corner cut
     function cutCorners(x,y,width,height) {
