@@ -17,12 +17,14 @@ const todo = {
   "Make the corners cut" : "Done",
   "Make the renderStack support text" : "Done",
   "Add support for scaling renderStack text" : "Planned",
-  "Make a function to squeez text in a box" : "Done",
-  "Add titles to the menues" : "Planned",
-  "Add buttons to the menu" : "Planned",
+  "Make a function to squeeze text in a box" : "Done",
+  "Switch the funnction to a bianary search method" : "Done",
+  "Add titles to the menues" : "In Progress",
+  "Add buttons to the menu" : "In Progress",
   "Detect when the mouse is over an button in the menu" : "Planned",
   "Make the buttons clickable" : "Planned",
-  "Add on open / on closed functions for the menu" : "Planned",
+  "Add onHover functions to the buttons" : "In Progress",
+  "Add on open / on closed functions for the menu" : "In Progress",
   "Make menus draggable" : "Planned",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
@@ -252,10 +254,16 @@ function render(inputOptions) {
     let width = size.x
     let height = size.y
     let location = currentMenu.location
+    let stage = currentMenu.stage
     let path
 
+    //draws the text in a box as large as possible
     function fitText(text, x, y, width, height, stage, color, font) {
+      let upperBound = Math.max(canvas.width,canvas.height)
+      let lowerBound = 0
       let size = 1000
+
+      //measures the text at measureSize to be scaled for doesItFit
       const measureSize = 250
       ctx.font = `${measureSize}px ${font}`
       const words = text.split(" ")
@@ -270,62 +278,74 @@ function render(inputOptions) {
       let currentLine = ""
       let length = 0
       let index = 0
-      while (true) {
 
-        //if the lines take up too much hight
-        if ((lines.length + (currentLine == "" ? 0 : 1)) * size > height) {
-          size *= .9
-          lines = []
-          lengths = []
-          currentLine = ""
-          length = 0
-          index = 0        
-        }        
+      //checks if the text would fit at the current size
+      function doesItFit() {
+        lines = []
+        lengths = []
+        currentLine = ""
+        length = 0
+        index = 0
+        while (true) {
 
-        //there are no more words
-        else if (!words[index]) {
-          lines.push(currentLine)
-          lengths.push(length)
-          break
-        }
-        //if currentLine in empty
-        else if (currentLine == "") {
+          //if the lines take up too much hight
+          if ((lines.length + (currentLine == "" ? 0 : 1)) * size > height) {
+            return false
+          }        
 
-          //if adding a word makes the line too long
-          if (wordWidths[words[index]] * size > width) {
-            size *= .9
-            lines = []
-            lengths = []
-            currentLine = ""
-            length = 0
-            index = 0        
-          } else {
-
-          //if adding a word does not make the line too long
-            currentLine = words[index]
-            length = wordWidths[words[index]] * size
-            index++
-          }
-        }
-
-        //if currentLine has something in it
-        else if (currentLine !== "") {
-
-          //if adding a word and a space makes the line too long
-          if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
+          //there are no more words
+          else if (!words[index]) {
             lines.push(currentLine)
             lengths.push(length)
-            length = 0
-            currentLine = ""
-          } else {
-
-          //if adding a word and a space does not make the line too long
-            currentLine += " " + words[index]
-            length += (wordWidths[words[index]] + wordWidths[" "]) * size
-            index++
+            return true
           }
+          //if currentLine in empty
+          else if (currentLine == "") {
+
+            //if adding a word makes the line too long
+            if (wordWidths[words[index]] * size > width) {
+              return false
+            } else {
+
+            //if adding a word does not make the line too long
+              currentLine = words[index]
+              length = wordWidths[words[index]] * size
+              index++
+            }
+          }
+
+          //if currentLine has something in it
+          else if (currentLine !== "") {
+
+            //if adding a word and a space makes the line too long
+            if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
+              lines.push(currentLine)
+              lengths.push(length)
+              length = 0
+              currentLine = ""
+            } else {
+
+            //if adding a word and a space does not make the line too long
+              currentLine += " " + words[index]
+              length += (wordWidths[words[index]] + wordWidths[" "]) * size
+              index++
+            }
+          }
+        }
       }
+
+      //finds the size
+      for (let index = 0; index < 25; index++) {
+        if (doesItFit()) {
+          lowerBound = size
+          size = (lowerBound + upperBound) / 2
+        } else {
+          upperBound = size
+          size = (lowerBound + upperBound) / 2
+        }
       }
+
+      //adds it to the renderstack
       for (let index in lines) {
         renderStack.push({
           stage: stage,
@@ -339,6 +359,7 @@ function render(inputOptions) {
         })      
       }
     }
+
     fitText("Hello, I am a text box! 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22", 0, 0, 250, 250, 15, [0,200,0], "Arial")
 
     //takes the posisiton and size of a box and returns a path to the same box with its corner cut
@@ -377,7 +398,7 @@ function render(inputOptions) {
       mode: "fill",
       path: path,
       color: currentMenu.backgroundColor,
-      stage: currentMenu.stage,
+      stage: stage,
       translated: true
     })
 
@@ -392,6 +413,8 @@ function render(inputOptions) {
         lineWidth: currentMenu.border.width * Math.min(size.x, size.y)
       })
     }
+
+    
 
     //TODO subtrack the title from height
 
