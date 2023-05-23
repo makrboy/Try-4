@@ -19,7 +19,7 @@ const todo = {
   "Add support for scaling renderStack text" : "Planned",
   "Make a function to squeeze text in a box" : "Done",
   "Switch the funnction to a bianary search method" : "Done",
-  "Add titles to the menues" : "In Progress",
+  "Add titles to the menues" : "Done",
   "Add buttons to the menu" : "In Progress",
   "Detect when the mouse is over an button in the menu" : "Planned",
   "Make the buttons clickable" : "Planned",
@@ -194,15 +194,16 @@ let menu = {
   draggable: false,
   backgroundColor: [0,0,0,.75],
   border: {
-      width: .1,
+      width: .015,
       color: [50,50,50,.75]
   },
   title: {
       text: "I'm a title!",
       color: [0,0,100],
-      size: .3
+      size: .3,
+      font: "Arial"
   },
-  padding: 25,
+  padding: .25,
   buttons: [
       {
           border: {
@@ -254,7 +255,10 @@ function render(inputOptions) {
     let width = size.x
     let height = size.y
     let location = currentMenu.location
+    let x = location.x
+    let y = location.y
     let stage = currentMenu.stage
+    let padding = currentMenu.padding
     let path
 
     //draws the text in a box as large as possible
@@ -278,6 +282,7 @@ function render(inputOptions) {
       let currentLine = ""
       let length = 0
       let index = 0
+      let fitLines, fitLengths
 
       //checks if the text would fit at the current size
       function doesItFit() {
@@ -297,6 +302,8 @@ function render(inputOptions) {
           else if (!words[index]) {
             lines.push(currentLine)
             lengths.push(length)
+            fitLines = lines
+            fitLengths = lengths
             return true
           }
           //if currentLine in empty
@@ -346,21 +353,21 @@ function render(inputOptions) {
       }
 
       //adds it to the renderstack
-      for (let index in lines) {
+      for (let index in fitLines) {
         renderStack.push({
           stage: stage,
           size: size,
           mode: "text",
           color: color,
-          x: x + (width - lengths[index]) / 2,
+          x: x + (width - fitLengths[index]) / 2,
           y: y + index * size,
           font: font,
-          text: lines[index]
+          text: fitLines[index]
         })      
       }
     }
 
-    fitText("Hello, I am a text box! 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22", 0, 0, 250, 250, 15, [0,200,0], "Arial")
+    fitText("Hello, I am a text box! 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22", Math.cos(Date.now()/500)*200+200, Math.sin(Date.now()/500)*200+200, 250, 250, 15, [0,200,0], "Arial")
 
     //takes the posisiton and size of a box and returns a path to the same box with its corner cut
     function cutCorners(x,y,width,height) {
@@ -379,18 +386,18 @@ function render(inputOptions) {
     }
 
     //get a nice corner cut box if cutCorners is true
-    if (!currentMenu.cutCorners) {
-      path = cutCorners(location.x,location.y,width,height)
+    if (currentMenu.cutCorners) {
+      path = cutCorners(x,y,width,height)
     } else {
       
       //or just a rectangle
       path = []
-      path.push({x: location.x, y: location.y})
-      path.push({x: location.x + width, y: location.y})
-      path.push({x: location.x + width, y: location.y + height})
-      path.push({x: location.x, y: location.y + height})
-      path.push({x: location.x, y: location.y})
-      path.push({x: location.x + width, y: location.y})
+      path.push({x: x, y: y})
+      path.push({x: x + width, y: y})
+      path.push({x: x + width, y: y + height})
+      path.push({x: x, y: y + height})
+      path.push({x: x, y: y})
+      path.push({x: x + width, y: y})
     }
 
     //add the background of the menu
@@ -414,9 +421,22 @@ function render(inputOptions) {
       })
     }
 
-    
-
-    //TODO subtrack the title from height
+    //if the menu has a title, display it and make height and y take title space into acount
+    if (currentMenu.title) {
+      let title = currentMenu.title
+      fitText(
+        title.text,
+        x + (currentMenu.cutCorners ? width * .1 : 0),
+        y,
+        width - (currentMenu.cutCorners ? width * .2 : 0),
+        height * title.size,
+        stage,
+        title.color,
+        title.font
+        )
+        y += height * title.size
+        height *= 1 - title.size
+    }
 
     //calculate how big the boxes can be, as well as how to arrange them
     const sizes = []
