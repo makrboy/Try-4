@@ -20,7 +20,8 @@ const todo = {
   "Make a function to squeeze text in a box" : "Done",
   "Switch the funnction to a bianary search method" : "Done",
   "Add titles to the menues" : "Done",
-  "Add buttons to the menu" : "In Progress",
+  "Add buttons to the menu" : "Done",
+  "Add text to the buttons" : "In Progress",
   "Detect when the mouse is over an button in the menu" : "Planned",
   "Make the buttons clickable" : "Planned",
   "Add onHover functions to the buttons" : "In Progress",
@@ -199,8 +200,8 @@ let menu = {
   },
   title: {
       text: "I'm a title!",
-      color: [0,0,100],
-      size: .3,
+      color: [100,100,100],
+      size: .25,
       font: "Arial"
   },
   padding: .25,
@@ -219,9 +220,30 @@ let menu = {
               onHover: function(self) {},
               onClick: function(self) {}
           }
-      }
+      },
   ],
   functions: {
+      onRender: function(self) {
+        self.buttons = []
+        const count = Math.floor(Math.abs(Math.cos(Date.now()/10000)*50))
+        for (let index = 0; index < count; index++) {
+          self.buttons[index] = {
+            border: {
+                width: .015,
+                color: [0,200,0]
+            },
+            color: [255 - index * (255 / count), 0, index * (255 / count)],
+            title: {
+                text: "I'm a title!",
+                color: [0,0,0]
+            },
+            functions: {
+                onHover: function(self) {},
+                onClick: function(self) {}
+            }
+          }
+        }
+      },
       onOpen: function(self) {},
       onClose: function(self) {},
       onResize: function(self) {}
@@ -250,6 +272,11 @@ function render(inputOptions) {
   //turn the menu into render stack entries
   function stackMenus() {
     let currentMenu = menu
+
+    if (currentMenu.functions && currentMenu.functions.onRender) {
+      currentMenu.functions.onRender(currentMenu)
+    }
+
     let count = currentMenu.buttons.length
     let size = currentMenu.size
     let width = size.x
@@ -385,22 +412,14 @@ function render(inputOptions) {
       return path
     }
 
-    //get a nice corner cut box if cutCorners is true
-    if (currentMenu.cutCorners) {
-      path = cutCorners(x,y,width,height)
-    } else {
-      
-      //or just a rectangle
-      path = []
-      path.push({x: x, y: y})
-      path.push({x: x + width, y: y})
-      path.push({x: x + width, y: y + height})
-      path.push({x: x, y: y + height})
-      path.push({x: x, y: y})
-      path.push({x: x + width, y: y})
-    }
-
     //add the background of the menu
+    path = []
+    path.push({x: x, y: y})
+    path.push({x: x + width, y: y})
+    path.push({x: x + width, y: y + height})
+    path.push({x: x, y: y + height})
+    path.push({x: x, y: y})
+    path.push({x: x + width, y: y})
     renderStack.push({
       mode: "fill",
       path: path,
@@ -426,32 +445,76 @@ function render(inputOptions) {
       let title = currentMenu.title
       fitText(
         title.text,
-        x + (currentMenu.cutCorners ? width * .1 : 0),
+        x,
         y,
-        width - (currentMenu.cutCorners ? width * .2 : 0),
+        width,
         height * title.size,
         stage,
         title.color,
         title.font
         )
         y += height * title.size
-        height *= 1 - title.size
+        height *= (1 - title.size)
     }
 
     //calculate how big the boxes can be, as well as how to arrange them
-    const sizes = []
-    for (let i = 1; i <= count; i++) {
-        let cols = i
-        let rowz = Math.ceil(count / i)
-        sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
-        rowz = i
-        cols = Math.ceil(count / i)
-        sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
+    if (currentMenu.buttons.length > 0) {
+      const sizes = []
+      for (let i = 1; i <= count; i++) {
+          let cols = i
+          let rowz = Math.ceil(count / i)
+          sizes.push({cols, rowz, size:Math.min(height / cols, width / rowz)})
+          rowz = i
+          cols = Math.ceil(count / i)
+          sizes.push({cols, rowz, size:Math.min(height / cols, width / rowz)})
+      }
+      sizes.sort(({size: a},{size: b})=> b - a)
+      let colums = sizes[0].cols
+      let rows = sizes[0].rowz
+      let boxSize = sizes[0].size
+
+      for (let index in currentMenu.buttons) {
+        let boxX = x + (index % rows) * (boxSize + (width - rows * boxSize) / rows)
+        let boxY = y + Math.floor(index / rows) * (boxSize + (height - colums * boxSize) / colums)
+        
+        let button = currentMenu.buttons[index]
+
+        //create the path, with or without corners cut
+        if (currentMenu.cutCorners) {
+          path = cutCorners(boxX,boxY,boxSize,boxSize)
+        } else {
+          path = []
+          path.push({x: boxX, y: boxY})
+          path.push({x: boxX, y: boxY + boxSize})
+          path.push({x: boxX + boxSize, y: boxY + boxSize})
+          path.push({x: boxX + boxSize, y: boxY})
+
+          path.push({x: boxX, y: boxY})
+          path.push({x: boxX, y: boxY + boxSize})
+        }
+
+        //render the button background
+        renderStack.push({
+          mode: "fill",
+          path: path,
+          color: button.color,
+          stage: stage,
+          translated: true
+        })
+
+        //if the button has a border add it to the renderstack
+        if (button.border) {
+          renderStack.push({
+            mode: "line",
+            path: path,
+            color: button.border.color,
+            stage: stage,
+            translated: true,
+            lineWidth: (boxSize * button.border.width)
+          })  
+        }
+      }
     }
-    sizes.sort(({size: a},{size: b})=> b - a)
-    let colums = sizes[0].cols
-    let rows = sizes[0].rowz
-    let boxSize = sizes[0].size
   }
   
 
