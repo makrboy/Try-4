@@ -26,9 +26,8 @@ const todo = {
   "Fix the buttons so they are even" : "Done",
   "Add onRender functions to menus" : "Done",
   "Add onRender functions to buttons" : "Done",
-  "Detect when the mouse is over an button in the menu" : "Planned",
-  "Make the buttons clickable" : "Planned",
-  "Add onHover functions to the buttons" : "In Progress",
+  "Detect when the mouse is over an button in the menu" : "Done",
+  "Make the buttons clickable" : "In Progress",
   "Add on open / on closed functions for the menu" : "In Progress",
   "Make menus draggable" : "Planned",
   "Add Matter" : "Planned",
@@ -228,25 +227,32 @@ let menu = {
   ],
   functions: {
       onRender: function(self) {
-        self.buttons = []
-        const count = Math.floor(Date.now()%10000/1000)+1
-        //const count = 9
-        for (let index = 0; index < count; index++) {
-          self.buttons[index] = {
-            border: {
-                width: .015,
-                color: [0,200,0]
-            },
-            color: [255 - index * (255 / count), 0, index * (255 / count)],
-            title: {
-                text: "I am box #"+(index+1),
-                color: [0,0,0],
-                font: "Arial"
-            },
-            functions: {
-                onRender: function(self, menu) {},
-                onHover: function(self) {},
-                onClick: function(self) {}
+        if ((Date.now()%50000/1000)%1<.1) {
+          self.buttons = []
+          const count = Math.floor(Date.now()%50000/1000)+1
+          //const count = 9
+          for (let index = 0; index < count; index++) {
+            self.buttons[index] = {
+              border: {
+                  width: .015,
+                  color: [0,200,0]
+              },
+              color: [255 - index * (255 / count), 0, index * (255 / count)],
+              title: {
+                  text: "I am box #"+(index+1),
+                  color: [0,0,0],
+                  font: "Arial"
+              },
+              functions: {
+                  onRender: function(self, menu) {
+                    if (self.targeted) {
+                      self.color = [255 - index * (255 / count), 0, index * (255 / count), .5]
+                    } else {
+                      self.color = [255 - index * (255 / count), 0, index * (255 / count)]
+                    }
+                  },
+                  onClick: function(self, menu) {}
+              }
             }
           }
         }
@@ -641,6 +647,20 @@ function render(inputOptions) {
   renderRenderStack()
 }
 
+function menuFunctions() {
+  let currentMenu = menu
+  let mouse = playerInputs.mousePosistion
+  for (let index in currentMenu.buttons) {
+    let button = currentMenu.buttons[index]
+    let x = button.posistion.x
+    let y = button.posistion.y
+    let size = button.size
+    if (mouse.x >= x && mouse.x <= x + size && mouse.y >= y && mouse.y <= y + size) {
+      button.targeted = true
+    } else { button.targeted = false }
+  }
+}
+
 function temp() {
 
   renderStack = []
@@ -694,6 +714,7 @@ function update(inputTime) {
   
   temp()
   render()
+  menuFunctions()
 
   //start the next loop
   updateindex++
