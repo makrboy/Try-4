@@ -27,7 +27,7 @@ const todo = {
   "Add onRender functions to menus" : "Done",
   "Add onRender functions to buttons" : "Done",
   "Detect when the mouse is over an button in the menu" : "Done",
-  "Make the buttons clickable" : "In Progress",
+  "Make the buttons clickable" : "Done",
   "Add on open / on closed functions for the menu" : "In Progress",
   "Make menus draggable" : "Planned",
   "Add Matter" : "Planned",
@@ -209,53 +209,69 @@ let menu = {
   },
   padding: .05,
   buttons: [
-      {
-          border: {
-              width: .1,
-              color: [255,0,0,.2]
-          },
-          color: [0,0,255],
-          title: {
-              text: "I'm a title!",
-              color: [0,0,0]
-          },
-          functions: {
-              onHover: function(self) {},
-              onClick: function(self) {}
-          }
+    {
+      border: {
+          width: .1,
+          color: [0,0,0,.75]
       },
+      color: [255,0,0],
+      title: {
+          text: "Remove a button",
+          color: [0,0,0]
+      },
+      functions: {
+          onRender: function(self, menu) {
+            self.color = (self.targeted ? [150,0,0] : [255,0,0])
+          },
+          onClick: function(self, menu) {
+            if (menu.buttons.length > 2) { menu.buttons.pop() }
+          }
+        }
+    },
+    {
+        border: {
+            width: .1,
+            color: [0,0,0,.75]
+        },
+        color: [0,255,0],
+        title: {
+            text: "Add a button",
+            color: [0,0,0]
+        },
+        functions: {
+            onRender: function(self, menu) {
+              self.color = (self.targeted ? [0,150,0] : [0,255,0])
+            },
+            onClick: function(self, menu) {
+              menu.buttons.push({
+                border: {
+                  width: .1,
+                  color: [0,0,0,.75]
+                },
+                color: [Math.random()*255,Math.random()*255,Math.random()*255],
+                title: {
+                    text: "Button #" + menu.buttons.length,
+                    color: [0,0,0]
+                },
+                functions: {
+                  onRender: function(self, menu) {
+                    self.color[3] = (self.targeted ? .5 : 1)
+                  },
+                  onClick: function(self, menu) {
+                    self.color = [Math.random()*255,Math.random()*255,Math.random()*255]
+                  }
+                }
+              })
+            }
+        }
+    },
   ],
   functions: {
       onRender: function(self) {
-        if ((Date.now()%50000/1000)%1<.1) {
-          self.buttons = []
-          const count = Math.floor(Date.now()%50000/1000)+1
-          //const count = 9
-          for (let index = 0; index < count; index++) {
-            self.buttons[index] = {
-              border: {
-                  width: .015,
-                  color: [0,200,0]
-              },
-              color: [255 - index * (255 / count), 0, index * (255 / count)],
-              title: {
-                  text: "I am box #"+(index+1),
-                  color: [0,0,0],
-                  font: "Arial"
-              },
-              functions: {
-                  onRender: function(self, menu) {
-                    if (self.targeted) {
-                      self.color = [255 - index * (255 / count), 0, index * (255 / count), .5]
-                    } else {
-                      self.color = [255 - index * (255 / count), 0, index * (255 / count)]
-                    }
-                  },
-                  onClick: function(self, menu) {}
-              }
-            }
-          }
-        }
+        self.size.x = canvas.width * .8
+        self.size.y = canvas.height * .8
+        self.location.x = canvas.width * .1
+        self.location.y = canvas.height * .1
       },
       onOpen: function(self) {},
       onClose: function(self) {},
@@ -406,8 +422,6 @@ function render(inputOptions) {
         })      
       }
     }
-
-    fitText("Hello, I am a text box! 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22", Math.cos(Date.now()/500)*200+200, Math.sin(Date.now()/500)*200+200, 250, 250, 15, [0,200,0], "Arial")
 
     //takes the posisiton and size of a box and returns a path to the same box with its corner cut
     function cutCorners(x,y,width,height) {
@@ -647,17 +661,34 @@ function render(inputOptions) {
   renderRenderStack()
 }
 
+//for detecting clicks on the like
 function menuFunctions() {
   let currentMenu = menu
   let mouse = playerInputs.mousePosistion
+
+  //run for each button
   for (let index in currentMenu.buttons) {
     let button = currentMenu.buttons[index]
     let x = button.posistion.x
     let y = button.posistion.y
     let size = button.size
+
+    //check if the mouse is over it
     if (mouse.x >= x && mouse.x <= x + size && mouse.y >= y && mouse.y <= y + size) {
+
+      //update the targeted state for use by the button
       button.targeted = true
-    } else { button.targeted = false }
+
+      //run onClick functions when the button is clicked
+      if (playerInputs.buttons["mouseLeft"]) {
+        button.mouseDown = true
+      } else if (button.mouseDown == true) {
+        button.mouseDown = false
+        if (button.functions && button.functions.onClick) {
+          button.functions.onClick(button, currentMenu)
+        }
+      }
+    } else { button.targeted = false; button.mouseDown = false }
   }
 }
 
@@ -691,16 +722,6 @@ function temp() {
     color : [0,100,0,.5],
     x : 0,
     y : 500
-  })
-  renderStack.push({
-    stage: 11,
-    size: 50,
-    mode: "text",
-    color: [0,255,255],
-    x: 100,
-    y: 700,
-    font: "Arial",
-    text: "Hello. World!"
   })
 
   vieport.x = Math.abs(Math.sin(Date.now()/2000)*500)
