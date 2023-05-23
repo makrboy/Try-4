@@ -21,7 +21,11 @@ const todo = {
   "Switch the funnction to a bianary search method" : "Done",
   "Add titles to the menues" : "Done",
   "Add buttons to the menu" : "Done",
-  "Add text to the buttons" : "In Progress",
+  "Add text to the buttons" : "Done",
+  "Add padding to the buttons" : "Done",
+  "Fix the buttons so they are even" : "Done",
+  "Add onRender functions to menus" : "Done",
+  "Add onRender functions to buttons" : "Done",
   "Detect when the mouse is over an button in the menu" : "Planned",
   "Make the buttons clickable" : "Planned",
   "Add onHover functions to the buttons" : "In Progress",
@@ -204,7 +208,7 @@ let menu = {
       size: .25,
       font: "Arial"
   },
-  padding: .25,
+  padding: .05,
   buttons: [
       {
           border: {
@@ -225,7 +229,8 @@ let menu = {
   functions: {
       onRender: function(self) {
         self.buttons = []
-        const count = Math.floor(Math.abs(Math.cos(Date.now()/10000)*50))
+        const count = Math.floor(Date.now()%10000/1000)+1
+        //const count = 9
         for (let index = 0; index < count; index++) {
           self.buttons[index] = {
             border: {
@@ -234,10 +239,12 @@ let menu = {
             },
             color: [255 - index * (255 / count), 0, index * (255 / count)],
             title: {
-                text: "I'm a title!",
-                color: [0,0,0]
+                text: "I am box #"+(index+1),
+                color: [0,0,0],
+                font: "Arial"
             },
             functions: {
+                onRender: function(self, menu) {},
                 onHover: function(self) {},
                 onClick: function(self) {}
             }
@@ -457,27 +464,47 @@ function render(inputOptions) {
         height *= (1 - title.size)
     }
 
+    for (let index in currentMenu.buttons) {
+      let button = currentMenu.buttons[index]
+      if (button.functions && button.functions.onRender) {
+        button.functions.onRender(button,currentMenu)
+      }
+    }
+
     //calculate how big the boxes can be, as well as how to arrange them
     if (currentMenu.buttons.length > 0) {
       const sizes = []
       for (let i = 1; i <= count; i++) {
           let cols = i
           let rowz = Math.ceil(count / i)
-          sizes.push({cols, rowz, size:Math.min(height / cols, width / rowz)})
+          sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
           rowz = i
           cols = Math.ceil(count / i)
-          sizes.push({cols, rowz, size:Math.min(height / cols, width / rowz)})
+          sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
       }
       sizes.sort(({size: a},{size: b})=> b - a)
-      let colums = sizes[0].cols
+      let columns = sizes[0].cols
       let rows = sizes[0].rowz
-      let boxSize = sizes[0].size
+      let baseBoxSize = sizes[0].size
+      let boxSize = baseBoxSize * (1 - (padding * 2))
 
-      for (let index in currentMenu.buttons) {
-        let boxX = x + (index % rows) * (boxSize + (width - rows * boxSize) / rows)
-        let boxY = y + Math.floor(index / rows) * (boxSize + (height - colums * boxSize) / colums)
-        
+      //run for each button
+      for (let index = 0; index < currentMenu.buttons.length; index++) {
         let button = currentMenu.buttons[index]
+
+        //calculate posistion
+        let boxX = x + (index % columns) * (baseBoxSize + (width - columns * baseBoxSize) / columns) + (width - columns * baseBoxSize) / columns / 2
+        let boxY = y + Math.floor(index / columns) * (baseBoxSize + (height - rows * baseBoxSize) / rows) + (height - rows * baseBoxSize) / rows / 2
+        
+        //offset for padding
+        boxX += currentMenu.padding * baseBoxSize
+        boxY += currentMenu.padding * baseBoxSize
+
+        //store all these calculations in the button for click detection
+        if (!button.posistion) { button.posistion = {} }
+        button.posistion.x = boxX
+        button.posistion.y = boxY
+        button.size = boxSize
 
         //create the path, with or without corners cut
         if (currentMenu.cutCorners) {
@@ -512,6 +539,21 @@ function render(inputOptions) {
             translated: true,
             lineWidth: (boxSize * button.border.width)
           })  
+        }
+
+        //display the title if there is one, taking into acount cut corners
+        if (button.title) {
+          let title = button.title
+          fitText(
+            title.text,
+            boxX + (currentMenu.cutCorners ? boxSize * .1 : 0),
+            boxY + (currentMenu.cutCorners ? boxSize * .1 : 0),
+            boxSize - (currentMenu.cutCorners ? boxSize * .2 : 0),
+            boxSize - (currentMenu.cutCorners ? boxSize * .2 : 0),
+            stage,
+            title.color,
+            title.font
+            )
         }
       }
     }

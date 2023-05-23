@@ -16,49 +16,73 @@ There are two types of entry: line and fill, shaped like so:
 One thing to note is that when rendering text all that is needed is the stage, size, color, x, y, font, and text
 
 
-menu = {
-    stage: 10,
-    size: {
-        x: 100,
-        y: 100
-    },
-    location: {
-        x: 0,
-        y: 0
-    },
-    draggable: false,
-    backgroundColor: [100,0,0,.5],
-    border: {
-        width: .1,
-        color: [0,255,0]
-    },
-    title: {
-        text: "I'm a title!",
-        color: [0,0,0],
-        size: .3
-    },
-    padding: 25,
-    buttons: [
-        {
+let menu = {
+  cutCorners: true,
+  stage: 10,
+  size: {
+      x: 500,
+      y: 500
+  },
+  location: {
+      x: 100,
+      y: 100
+  },
+  draggable: false,
+  backgroundColor: [0,0,0,.75],
+  border: {
+      width: .015,
+      color: [50,50,50,.75]
+  },
+  title: {
+      text: "I'm a title!",
+      color: [100,100,100],
+      size: .25,
+      font: "Arial"
+  },
+  padding: .05,
+  buttons: [
+      {
+          border: {
+              width: .1,
+              color: [255,0,0,.2]
+          },
+          color: [0,0,255],
+          title: {
+              text: "I'm a title!",
+              color: [0,0,0]
+          },
+          functions: {
+              onHover: function(self) {},
+              onClick: function(self) {}
+          }
+      },
+  ],
+  functions: {
+      onRender: function(self) {
+        self.buttons = []
+        const count = Math.floor(Date.now()%10000/1000)+1
+        //const count = 9
+        for (let index = 0; index < count; index++) {
+          self.buttons[index] = {
             border: {
-                width: .1,
-                color: [255,0,0,.2]
+                width: .015,
+                color: [0,200,0]
             },
-            color: [0,0,255],
+            color: [255 - index * (255 / count), 0, index * (255 / count)],
             title: {
-                text: "I'm a title!",
-                color: [0,0,0]
+                text: "I am box #"+(index+1),
+                color: [0,0,0],
+                font: "Arial"
             },
             functions: {
-                onHover: function(self,menu) {},
-                onMenuOpen: function(self,menu) {},
-                onClick: function(self,menu) {}
+                onHover: function(self) {},
+                onClick: function(self) {}
             }
+          }
         }
-    ],
-    functions: {
-        onOpen: function(self) {},
-        onClose: function(self) {},
-        onResize: function(self) {}
-    }
+      },
+      onOpen: function(self) {},
+      onClose: function(self) {},
+      onResize: function(self) {}
+  }
 }
