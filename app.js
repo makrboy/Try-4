@@ -202,32 +202,13 @@ let menu = {
       color: [50,50,50,.75]
   },
   title: {
-      text: "I'm a title!",
-      color: [100,100,100],
-      size: .25,
-      font: "Arial"
+      text: "Button Font Testing Menu",
+      color: [200,200,200],
+      size: .2,
+      font: "Times"
   },
   padding: .05,
   buttons: [
-    {
-      border: {
-          width: .1,
-          color: [0,0,0,.75]
-      },
-      color: [255,0,0],
-      title: {
-          text: "Remove a button",
-          color: [0,0,0]
-      },
-      functions: {
-          onRender: function(self, menu) {
-            self.color = (self.targeted ? [150,0,0] : [255,0,0])
-          },
-          onClick: function(self, menu) {
-            if (menu.buttons.length > 2) { menu.buttons.pop() }
-          }
-        }
-    },
     {
         border: {
             width: .1,
@@ -243,25 +224,66 @@ let menu = {
               self.color = (self.targeted ? [0,150,0] : [0,255,0])
             },
             onClick: function(self, menu) {
-              menu.buttons.push({
-                border: {
-                  width: .1,
-                  color: [0,0,0,.75]
-                },
-                color: [Math.random()*255,Math.random()*255,Math.random()*255],
-                title: {
-                    text: "Button #" + menu.buttons.length,
-                    color: [0,0,0]
-                },
-                functions: {
-                  onRender: function(self, menu) {
-                    self.color[3] = (self.targeted ? .5 : 1)
+              const fonts = [
+                'Arial',
+                'Helvetica',
+                'Times New Roman',
+                'Times',
+                'Courier New',
+                'Courier',
+                'Verdana',
+                'Georgia',
+                'Palatino',
+                'Garamond',
+                'Bookman',
+                'Comic Sans MS',
+                'Trebuchet MS',
+                'Arial Black',
+                'Impact'
+              ]
+              if (menu.buttons.length == 1) {
+                menu.buttons.push({
+                  border: {
+                      width: .1,
+                      color: [0,0,0,.75]
                   },
-                  onClick: function(self, menu) {
-                    self.color = [Math.random()*255,Math.random()*255,Math.random()*255]
+                  color: [255,0,0],
+                  title: {
+                      text: "Remove a button",
+                      color: [0,0,0]
+                  },
+                  functions: {
+                      onRender: function(self, menu) {
+                        self.color = (self.targeted ? [150,0,0] : [255,0,0])
+                      },
+                      onClick: function(self, menu) {
+                        menu.buttons.pop() 
+                      }
+                    }
+                })
+              } else {
+                const font = fonts[Math.floor(Math.random()*fonts.length)]
+                menu.buttons.push({
+                  border: {
+                    width: .1,
+                    color: [0,0,0,.75]
+                  },
+                  color: [Math.random()*255,Math.random()*255,Math.random()*255],
+                  title: {
+                      text: "Button #" + menu.buttons.length + " "+ font,
+                      color: [0,0,0],
+                      font: font
+                  },
+                  functions: {
+                    onRender: function(self, menu) {
+                      self.color[3] = (self.targeted ? .5 : 1)
+                    },
+                    onClick: function(self, menu) {
+                      self.color = [Math.random()*255,Math.random()*255,Math.random()*255]
+                    }
                   }
-                }
-              })
+                })
+              }
             }
         }
     },
