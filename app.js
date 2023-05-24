@@ -28,7 +28,7 @@ const todo = {
   "Add onRender functions to buttons" : "Done",
   "Detect when the mouse is over an button in the menu" : "Done",
   "Make the buttons clickable" : "Done",
-  "Add on open / on closed functions for the menu" : "In Progress",
+  "Add on open / on closed functions for the menu" : "Done",
   "Make menus draggable" : "Planned",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
@@ -76,7 +76,7 @@ const todo = {
   "Add sounds" : "Planned",
 }
 
-//Nice feedback of the todo list
+//nice feedback of the todo list
 function feedback() {
   let tasks = {}
   let ratio = {}
@@ -109,9 +109,9 @@ function feedback() {
 }
 feedback()
 
-//Setup global vars
+//setup global vars
 let renderStack = []
-const backgroundTransparency = 1
+let backgroundTransparency = 1
 let playerInputs = {
   buttons: {
   },
@@ -120,8 +120,9 @@ let playerInputs = {
     y: 0
   }
 }
+let openMenus = []
 
-//Setup canvas
+//setup canvas
 const canvas = document.querySelector('canvas');
 const ctx = canvas.getContext('2d');
 let vieport = {
@@ -130,7 +131,560 @@ let vieport = {
   size: 500
 }
 
-//Make the canvas always fill the screen
+//pack these together for readability
+const Menu = {
+
+  //runs any onOpen functions and adds the menu to openMenus
+  open: function(menu) {
+    if (menu.functions && menu.functions.onOpen) {
+      menu.functions.onOpen(menu)
+    }
+    openMenus.push(menu)
+  },
+
+  //runs any onClose functions and removes the menu from openMenus
+  close: function(menu) {
+    if (menu.functions && menu.functions.onClose) {
+      menu.functions.onClose(menu)
+    }
+    for (let index in openMenus) {
+      if (openMenus[index] == menu) { openMenus.splice(index,1) }
+    }  
+  },
+  
+  //turn the all the open menus into render stack entries
+  render() {
+
+    //run for each open menu
+    for (let menuIndex in openMenus) {
+      let currentMenu = openMenus[menuIndex]
+    
+      //run the menus onRender function
+      if (currentMenu.functions && currentMenu.functions.onRender) {
+        currentMenu.functions.onRender(currentMenu)
+      }
+
+      let count = currentMenu.buttons.length
+      let size = currentMenu.size
+      let width = size.x
+      let height = size.y
+      let location = currentMenu.location
+      let x = location.x
+      let y = location.y
+      let stage = currentMenu.stage
+      let padding = currentMenu.padding
+      let path
+
+      //draws the text in a box as large as possible
+      function fitText(text, x, y, width, height, stage, color, font) {
+        let upperBound = Math.max(canvas.width,canvas.height)
+        let lowerBound = 0
+        let size = 1000
+
+        //measures the text at measureSize to be scaled for doesItFit
+        const measureSize = 250
+        ctx.font = `${measureSize}px ${font}`
+        const words = text.split(" ")
+        let wordWidths = {}
+        for (let wordIndex = 0; wordIndex < words.length + 1; wordIndex++) {
+          const word = words[wordIndex] || " "
+          const wordWidth = ctx.measureText(word)
+          wordWidths[word] = wordWidth.width / measureSize
+        }
+        let lines = []
+        let lengths = []
+        let currentLine = ""
+        let length = 0
+        let index = 0
+        let fitLines, fitLengths
+
+        //checks if the text would fit at the current size
+        function doesItFit() {
+          lines = []
+          lengths = []
+          currentLine = ""
+          length = 0
+          index = 0
+          while (true) {
+
+            //if the lines take up too much hight
+            if ((lines.length + (currentLine == "" ? 0 : 1)) * size > height) {
+              return false
+            }        
+
+            //there are no more words
+            else if (!words[index]) {
+              lines.push(currentLine)
+              lengths.push(length)
+              fitLines = lines
+              fitLengths = lengths
+              return true
+            }
+            //if currentLine in empty
+            else if (currentLine == "") {
+
+              //if adding a word makes the line too long
+              if (wordWidths[words[index]] * size > width) {
+                return false
+              } else {
+
+              //if adding a word does not make the line too long
+                currentLine = words[index]
+                length = wordWidths[words[index]] * size
+                index++
+              }
+            }
+
+            //if currentLine has something in it
+            else if (currentLine !== "") {
+
+              //if adding a word and a space makes the line too long
+              if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
+                lines.push(currentLine)
+                lengths.push(length)
+                length = 0
+                currentLine = ""
+              } else {
+
+              //if adding a word and a space does not make the line too long
+                currentLine += " " + words[index]
+                length += (wordWidths[words[index]] + wordWidths[" "]) * size
+                index++
+              }
+            }
+          }
+        }
+
+        //finds the size
+        for (let index = 0; index < 25; index++) {
+          if (doesItFit()) {
+            lowerBound = size
+            size = (lowerBound + upperBound) / 2
+          } else {
+            upperBound = size
+            size = (lowerBound + upperBound) / 2
+          }
+        }
+
+        //adds it to the renderstack
+        for (let index in fitLines) {
+          renderStack.push({
+            stage: stage,
+            size: size,
+            mode: "text",
+            color: color,
+            x: x + (width - fitLengths[index]) / 2,
+            y: y + index * size,
+            font: font,
+            text: fitLines[index]
+          })      
+        }
+      }
+
+      //takes the posisiton and size of a box and returns a path to the same box with its corner cut
+      function cutCorners(x,y,width,height) {
+        let path = []
+        path.push({x: x,y: y + height * .1})
+        path.push({x: x + width * .1,y: y})
+        path.push({x: x + width * .9, y: y})
+        path.push({x: x + width, y: y + height * .1})
+        path.push({x: x + width, y: y + height * .9})
+        path.push({x: x + width * .9, y: y + height})
+        path.push({x: x + width * .1, y:y + height})
+        path.push({x: x ,y: y + height * .9})
+        path.push({x: x,y: y + height * .1})
+        path.push({x: x + width * .1,y: y})
+        return path
+      }
+
+      //add the background of the menu
+      path = []
+      path.push({x: x, y: y})
+      path.push({x: x + width, y: y})
+      path.push({x: x + width, y: y + height})
+      path.push({x: x, y: y + height})
+      path.push({x: x, y: y})
+      path.push({x: x + width, y: y})
+      renderStack.push({
+        mode: "fill",
+        path: path,
+        color: currentMenu.backgroundColor,
+        stage: stage,
+        translated: true
+      })
+
+      //if the menu has a border add it, then make height and y take title space into acount
+      if (currentMenu.border) {
+        const border = currentMenu.border
+        renderStack.push({
+          mode: "line",
+          path: path,
+          color: border.color,
+          stage: currentMenu.stage,
+          translated: true,
+          lineWidth: border.width * Math.min(size.x, size.y)
+        })
+        x += border.width * Math.min(size.x, size.y)
+        y += border.width * Math.min(size.x, size.y)
+        width -= border.width * Math.min(size.x, size.y) * 2
+        height -= border.width * Math.min(size.x, size.y) * 2
+      }
+
+      //if the menu has a title, display it and make height and y take title space into acount
+      if (currentMenu.title) {
+        let title = currentMenu.title
+        fitText(
+          title.text,
+          x,
+          y,
+          width,
+          height * title.size,
+          stage,
+          title.color,
+          title.font
+          )
+          y += height * title.size
+          height *= (1 - title.size)
+      }
+
+      //run any buttons onRender functions
+      for (let index in currentMenu.buttons) {
+        let button = currentMenu.buttons[index]
+        if (button.functions && button.functions.onRender) {
+          button.functions.onRender(button,currentMenu)
+        }
+      }
+
+      //calculate how big the boxes can be, as well as how to arrange them
+      if (currentMenu.buttons.length > 0) {
+        const sizes = []
+        for (let i = 1; i <= count; i++) {
+            let cols = i
+            let rowz = Math.ceil(count / i)
+            sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
+            rowz = i
+            cols = Math.ceil(count / i)
+            sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
+        }
+        sizes.sort(({size: a},{size: b})=> b - a)
+        let columns = sizes[0].cols
+        let rows = sizes[0].rowz
+        let baseBoxSize = sizes[0].size
+        let boxSize = baseBoxSize * (1 - (padding * 2))
+
+        //run for each button
+        for (let index = 0; index < currentMenu.buttons.length; index++) {
+          let button = currentMenu.buttons[index]
+
+          //calculate posistion
+          let boxX = x + (index % columns) * (baseBoxSize + (width - columns * baseBoxSize) / columns) + (width - columns * baseBoxSize) / columns / 2
+          let boxY = y + Math.floor(index / columns) * (baseBoxSize + (height - rows * baseBoxSize) / rows) + (height - rows * baseBoxSize) / rows / 2
+          
+          //offset for padding
+          boxX += currentMenu.padding * baseBoxSize
+          boxY += currentMenu.padding * baseBoxSize
+
+          //store all these calculations in the button for click detection
+          if (!button.posistion) { button.posistion = {} }
+          button.posistion.x = boxX
+          button.posistion.y = boxY
+          button.size = boxSize
+
+          //create the path, with or without corners cut
+          if (currentMenu.cutCorners) {
+            path = cutCorners(boxX,boxY,boxSize,boxSize)
+          } else {
+            path = []
+            path.push({x: boxX, y: boxY})
+            path.push({x: boxX, y: boxY + boxSize})
+            path.push({x: boxX + boxSize, y: boxY + boxSize})
+            path.push({x: boxX + boxSize, y: boxY})
+
+            path.push({x: boxX, y: boxY})
+            path.push({x: boxX, y: boxY + boxSize})
+          }
+
+          //render the button background
+          renderStack.push({
+            mode: "fill",
+            path: path,
+            color: button.color,
+            stage: stage,
+            translated: true
+          })
+
+          //if the button has a border add it to the renderstack
+          if (button.border) {
+            renderStack.push({
+              mode: "line",
+              path: path,
+              color: button.border.color,
+              stage: stage,
+              translated: true,
+              lineWidth: (boxSize * button.border.width)
+            })  
+          }
+
+          //display the title if there is one, taking into acount cut corners
+          if (button.title) {
+            let title = button.title
+            let border = boxSize * ((button.border && button.border.width) ? button.border.width : 0)
+            fitText(
+              title.text,
+              boxX + (currentMenu.cutCorners ? boxSize * .1 : border),
+              boxY + (currentMenu.cutCorners ? boxSize * .1 : border),
+              boxSize - (currentMenu.cutCorners ? boxSize * .2 : border * 2),
+              boxSize - (currentMenu.cutCorners ? boxSize * .2 : border * 2),
+              stage,
+              title.color,
+              title.font
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+let menus = {
+  buttonTest: {
+    cutCorners: true,
+    stage: 10,
+    size: {
+        x: 500,
+        y: 500
+    },
+    location: {
+        x: 100,
+        y: 100
+    },
+    draggable: false,
+    backgroundColor: [0,0,0,.75],
+    border: {
+        width: .015,
+        color: [50,50,50,.75]
+    },
+    title: {
+        text: "Button Font Testing Menu",
+        color: [200,200,200],
+        size: .2,
+        font: "Times"
+    },
+    padding: .05,
+    buttons: [
+      {
+        border: {
+            width: .1,
+            color: [0,0,0,.75]
+        },
+        color: null,
+        title: {
+            text: "Next Menu",
+            color: [0,0,0]
+        },
+        functions: {
+            onRender: function(self, menu) {
+              self.color = (self.targeted ? [150,150,150] : [255,255,255])
+            },
+            onClick: function(self, menu) {
+              Menu.close(menu)
+              Menu.open(menus.varTest)
+            }
+        }
+      },
+      {
+          border: {
+              width: .1,
+              color: [0,0,0,.75]
+          },
+          color: [0,255,0],
+          title: {
+              text: "Add a button",
+              color: [0,0,0]
+          },
+          functions: {
+              onRender: function(self, menu) {
+                self.color = (self.targeted ? [0,150,0] : [0,255,0])
+              },
+              onClick: function(self, menu) {
+                const fonts = [
+                  'Arial',
+                  'Helvetica',
+                  'Times New Roman',
+                  'Times',
+                  'Courier New',
+                  'Courier',
+                  'Verdana',
+                  'Georgia',
+                  'Palatino',
+                  'Garamond',
+                  'Bookman',
+                  'Comic Sans MS',
+                  'Trebuchet MS',
+                  'Arial Black',
+                  'Impact'
+                ]
+                if (menu.buttons.length == 2) {
+                  menu.buttons.push({
+                    border: {
+                        width: .1,
+                        color: [0,0,0,.75]
+                    },
+                    color: [255,0,0],
+                    title: {
+                        text: "Remove a button",
+                        color: [0,0,0]
+                    },
+                    functions: {
+                        onRender: function(self, menu) {
+                          self.color = (self.targeted ? [150,0,0] : [255,0,0])
+                        },
+                        onClick: function(self, menu) {
+                          menu.buttons.pop() 
+                        }
+                      }
+                  })
+                } else {
+                  const font = fonts[Math.floor(Math.random()*fonts.length)]
+                  menu.buttons.push({
+                    border: {
+                      width: .1,
+                      color: [0,0,0,.75]
+                    },
+                    color: [Math.random()*255,Math.random()*255,Math.random()*255],
+                    title: {
+                        text: "Button #" + menu.buttons.length + " "+ font,
+                        color: [0,0,0],
+                        font: font
+                    },
+                    functions: {
+                      onRender: function(self, menu) {
+                        self.color[3] = (self.targeted ? .5 : 1)
+                      },
+                      onClick: function(self, menu) {
+                        self.color = [Math.random()*255,Math.random()*255,Math.random()*255]
+                      }
+                    }
+                  })
+                }
+              }
+          }
+      },
+    ],
+    functions: {
+        onRender: function(self) {
+          self.size.x = canvas.width * .8
+          self.size.y = canvas.height * .8
+          self.location.x = canvas.width * .1
+          self.location.y = canvas.height * .1
+        },
+        onOpen: function(self) {},
+        onClose: function(self) {}
+    }
+  },
+  varTest: {
+    cutCorners: true,
+    stage: 10,
+    size: {
+        x: 500,
+        y: 500
+    },
+    location: {
+        x: 100,
+        y: 100
+    },
+    draggable: false,
+    backgroundColor: [0,0,0,.75],
+    border: {
+        width: .015,
+        color: [50,50,50,.75]
+    },
+    title: {
+        text: "",
+        color: [200,200,200],
+        size: .2,
+        font: "Times"
+    },
+    padding: .05,
+    buttons: [
+      {
+        border: {
+            width: .1,
+            color: [0,0,0,.75]
+        },
+        color: null,
+        title: {
+            text: "-.1",
+            color: [0,0,0]
+        },
+        functions: {
+            onRender: function(self, menu) {
+              self.color = (self.targeted ? [0,0,150] : [0,0,255])
+            },
+            onClick: function(self, menu) {
+              backgroundTransparency = Math.max(Math.round((backgroundTransparency-0.1)*10)/10, 0)
+              menu.functions.onOpen(menu)
+            }
+        }
+      },
+      {
+        border: {
+            width: .1,
+            color: [0,0,0,.75]
+        },
+        color: null,
+        title: {
+            text: "Next Menu",
+            color: [0,0,0]
+        },
+        functions: {
+            onRender: function(self, menu) {
+              self.color = (self.targeted ? [150,150,150] : [255,255,255])
+            },
+            onClick: function(self, menu) {
+              Menu.close(menu)
+              Menu.open(menus.buttonTest)
+            }
+        }
+      },
+      {
+        border: {
+            width: .1,
+            color: [0,0,0,.75]
+        },
+        color: null,
+        title: {
+            text: "+.1",
+            color: [0,0,0]
+        },
+        functions: {
+            onRender: function(self, menu) {
+              self.color = (self.targeted ? [0,0,150] : [0,0,255])
+            },
+            onClick: function(self, menu) {
+              backgroundTransparency = Math.min(Math.round((backgroundTransparency+0.1)*10)/10, 1)
+              menu.functions.onOpen(menu)
+            }
+        }
+      },
+    ],
+    functions: {
+        onRender: function(self) {
+          self.size.x = canvas.width * .6
+          self.size.y = canvas.height * .6
+          self.location.x = canvas.width * .2
+          self.location.y = canvas.height * .2
+        },
+        onOpen: function(self) {
+          self.title.text = "Current Background Transparency is "+backgroundTransparency
+        },
+        onClose: function(self) {}
+    }
+
+  }
+}
+
+//make the canvas always fill the screen
 function resize() {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
@@ -184,123 +738,7 @@ function getPlayerInputs() {
 }
 getPlayerInputs()
 
-let menu = {
-  cutCorners: true,
-  stage: 10,
-  size: {
-      x: 500,
-      y: 500
-  },
-  location: {
-      x: 100,
-      y: 100
-  },
-  draggable: false,
-  backgroundColor: [0,0,0,.75],
-  border: {
-      width: .015,
-      color: [50,50,50,.75]
-  },
-  title: {
-      text: "Button Font Testing Menu",
-      color: [200,200,200],
-      size: .2,
-      font: "Times"
-  },
-  padding: .05,
-  buttons: [
-    {
-        border: {
-            width: .1,
-            color: [0,0,0,.75]
-        },
-        color: [0,255,0],
-        title: {
-            text: "Add a button",
-            color: [0,0,0]
-        },
-        functions: {
-            onRender: function(self, menu) {
-              self.color = (self.targeted ? [0,150,0] : [0,255,0])
-            },
-            onClick: function(self, menu) {
-              const fonts = [
-                'Arial',
-                'Helvetica',
-                'Times New Roman',
-                'Times',
-                'Courier New',
-                'Courier',
-                'Verdana',
-                'Georgia',
-                'Palatino',
-                'Garamond',
-                'Bookman',
-                'Comic Sans MS',
-                'Trebuchet MS',
-                'Arial Black',
-                'Impact'
-              ]
-              if (menu.buttons.length == 1) {
-                menu.buttons.push({
-                  border: {
-                      width: .1,
-                      color: [0,0,0,.75]
-                  },
-                  color: [255,0,0],
-                  title: {
-                      text: "Remove a button",
-                      color: [0,0,0]
-                  },
-                  functions: {
-                      onRender: function(self, menu) {
-                        self.color = (self.targeted ? [150,0,0] : [255,0,0])
-                      },
-                      onClick: function(self, menu) {
-                        menu.buttons.pop() 
-                      }
-                    }
-                })
-              } else {
-                const font = fonts[Math.floor(Math.random()*fonts.length)]
-                menu.buttons.push({
-                  border: {
-                    width: .1,
-                    color: [0,0,0,.75]
-                  },
-                  color: [Math.random()*255,Math.random()*255,Math.random()*255],
-                  title: {
-                      text: "Button #" + menu.buttons.length + " "+ font,
-                      color: [0,0,0],
-                      font: font
-                  },
-                  functions: {
-                    onRender: function(self, menu) {
-                      self.color[3] = (self.targeted ? .5 : 1)
-                    },
-                    onClick: function(self, menu) {
-                      self.color = [Math.random()*255,Math.random()*255,Math.random()*255]
-                    }
-                  }
-                })
-              }
-            }
-        }
-    },
-  ],
-  functions: {
-      onRender: function(self) {
-        self.size.x = canvas.width * .8
-        self.size.y = canvas.height * .8
-        self.location.x = canvas.width * .1
-        self.location.y = canvas.height * .1
-      },
-      onOpen: function(self) {},
-      onClose: function(self) {}
-  }
-}
-
-//Do the rendering
+//do the rendering
 function render(inputOptions) {
 
   //only set baseline once
@@ -318,296 +756,6 @@ function render(inputOptions) {
     ctx.fillStyle = `rgb(30,30,30,${backgroundTransparency})`
     ctx.fillRect(0,0,canvas.width,canvas.height)
   }
-
-  //turn the menu into render stack entries
-  function stackMenus() {
-    let currentMenu = menu
-
-    //run the menus onRender function
-    if (currentMenu.functions && currentMenu.functions.onRender) {
-      currentMenu.functions.onRender(currentMenu)
-    }
-
-    let count = currentMenu.buttons.length
-    let size = currentMenu.size
-    let width = size.x
-    let height = size.y
-    let location = currentMenu.location
-    let x = location.x
-    let y = location.y
-    let stage = currentMenu.stage
-    let padding = currentMenu.padding
-    let path
-
-    //draws the text in a box as large as possible
-    function fitText(text, x, y, width, height, stage, color, font) {
-      let upperBound = Math.max(canvas.width,canvas.height)
-      let lowerBound = 0
-      let size = 1000
-
-      //measures the text at measureSize to be scaled for doesItFit
-      const measureSize = 250
-      ctx.font = `${measureSize}px ${font}`
-      const words = text.split(" ")
-      let wordWidths = {}
-      for (let wordIndex = 0; wordIndex < words.length + 1; wordIndex++) {
-        const word = words[wordIndex] || " "
-        const wordWidth = ctx.measureText(word)
-        wordWidths[word] = wordWidth.width / measureSize
-      }
-      let lines = []
-      let lengths = []
-      let currentLine = ""
-      let length = 0
-      let index = 0
-      let fitLines, fitLengths
-
-      //checks if the text would fit at the current size
-      function doesItFit() {
-        lines = []
-        lengths = []
-        currentLine = ""
-        length = 0
-        index = 0
-        while (true) {
-
-          //if the lines take up too much hight
-          if ((lines.length + (currentLine == "" ? 0 : 1)) * size > height) {
-            return false
-          }        
-
-          //there are no more words
-          else if (!words[index]) {
-            lines.push(currentLine)
-            lengths.push(length)
-            fitLines = lines
-            fitLengths = lengths
-            return true
-          }
-          //if currentLine in empty
-          else if (currentLine == "") {
-
-            //if adding a word makes the line too long
-            if (wordWidths[words[index]] * size > width) {
-              return false
-            } else {
-
-            //if adding a word does not make the line too long
-              currentLine = words[index]
-              length = wordWidths[words[index]] * size
-              index++
-            }
-          }
-
-          //if currentLine has something in it
-          else if (currentLine !== "") {
-
-            //if adding a word and a space makes the line too long
-            if (length + (wordWidths[words[index]] + wordWidths[" "]) * size > width) {
-              lines.push(currentLine)
-              lengths.push(length)
-              length = 0
-              currentLine = ""
-            } else {
-
-            //if adding a word and a space does not make the line too long
-              currentLine += " " + words[index]
-              length += (wordWidths[words[index]] + wordWidths[" "]) * size
-              index++
-            }
-          }
-        }
-      }
-
-      //finds the size
-      for (let index = 0; index < 25; index++) {
-        if (doesItFit()) {
-          lowerBound = size
-          size = (lowerBound + upperBound) / 2
-        } else {
-          upperBound = size
-          size = (lowerBound + upperBound) / 2
-        }
-      }
-
-      //adds it to the renderstack
-      for (let index in fitLines) {
-        renderStack.push({
-          stage: stage,
-          size: size,
-          mode: "text",
-          color: color,
-          x: x + (width - fitLengths[index]) / 2,
-          y: y + index * size,
-          font: font,
-          text: fitLines[index]
-        })      
-      }
-    }
-
-    //takes the posisiton and size of a box and returns a path to the same box with its corner cut
-    function cutCorners(x,y,width,height) {
-      let path = []
-      path.push({x: x,y: y + height * .1})
-      path.push({x: x + width * .1,y: y})
-      path.push({x: x + width * .9, y: y})
-      path.push({x: x + width, y: y + height * .1})
-      path.push({x: x + width, y: y + height * .9})
-      path.push({x: x + width * .9, y: y + height})
-      path.push({x: x + width * .1, y:y + height})
-      path.push({x: x ,y: y + height * .9})
-      path.push({x: x,y: y + height * .1})
-      path.push({x: x + width * .1,y: y})
-      return path
-    }
-
-    //add the background of the menu
-    path = []
-    path.push({x: x, y: y})
-    path.push({x: x + width, y: y})
-    path.push({x: x + width, y: y + height})
-    path.push({x: x, y: y + height})
-    path.push({x: x, y: y})
-    path.push({x: x + width, y: y})
-    renderStack.push({
-      mode: "fill",
-      path: path,
-      color: currentMenu.backgroundColor,
-      stage: stage,
-      translated: true
-    })
-
-    //if the menu has a border add it, then make height and y take title space into acount
-    if (currentMenu.border) {
-      const border = currentMenu.border
-      renderStack.push({
-        mode: "line",
-        path: path,
-        color: border.color,
-        stage: currentMenu.stage,
-        translated: true,
-        lineWidth: border.width * Math.min(size.x, size.y)
-      })
-      x += border.width * Math.min(size.x, size.y)
-      y += border.width * Math.min(size.x, size.y)
-      width -= border.width * Math.min(size.x, size.y) * 2
-      height -= border.width * Math.min(size.x, size.y) * 2
-    }
-
-    //if the menu has a title, display it and make height and y take title space into acount
-    if (currentMenu.title) {
-      let title = currentMenu.title
-      fitText(
-        title.text,
-        x,
-        y,
-        width,
-        height * title.size,
-        stage,
-        title.color,
-        title.font
-        )
-        y += height * title.size
-        height *= (1 - title.size)
-    }
-
-    //run any buttons onRender functions
-    for (let index in currentMenu.buttons) {
-      let button = currentMenu.buttons[index]
-      if (button.functions && button.functions.onRender) {
-        button.functions.onRender(button,currentMenu)
-      }
-    }
-
-    //calculate how big the boxes can be, as well as how to arrange them
-    if (currentMenu.buttons.length > 0) {
-      const sizes = []
-      for (let i = 1; i <= count; i++) {
-          let cols = i
-          let rowz = Math.ceil(count / i)
-          sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
-          rowz = i
-          cols = Math.ceil(count / i)
-          sizes.push({cols, rowz, size:Math.min(width / cols, height / rowz)})
-      }
-      sizes.sort(({size: a},{size: b})=> b - a)
-      let columns = sizes[0].cols
-      let rows = sizes[0].rowz
-      let baseBoxSize = sizes[0].size
-      let boxSize = baseBoxSize * (1 - (padding * 2))
-
-      //run for each button
-      for (let index = 0; index < currentMenu.buttons.length; index++) {
-        let button = currentMenu.buttons[index]
-
-        //calculate posistion
-        let boxX = x + (index % columns) * (baseBoxSize + (width - columns * baseBoxSize) / columns) + (width - columns * baseBoxSize) / columns / 2
-        let boxY = y + Math.floor(index / columns) * (baseBoxSize + (height - rows * baseBoxSize) / rows) + (height - rows * baseBoxSize) / rows / 2
-        
-        //offset for padding
-        boxX += currentMenu.padding * baseBoxSize
-        boxY += currentMenu.padding * baseBoxSize
-
-        //store all these calculations in the button for click detection
-        if (!button.posistion) { button.posistion = {} }
-        button.posistion.x = boxX
-        button.posistion.y = boxY
-        button.size = boxSize
-
-        //create the path, with or without corners cut
-        if (currentMenu.cutCorners) {
-          path = cutCorners(boxX,boxY,boxSize,boxSize)
-        } else {
-          path = []
-          path.push({x: boxX, y: boxY})
-          path.push({x: boxX, y: boxY + boxSize})
-          path.push({x: boxX + boxSize, y: boxY + boxSize})
-          path.push({x: boxX + boxSize, y: boxY})
-
-          path.push({x: boxX, y: boxY})
-          path.push({x: boxX, y: boxY + boxSize})
-        }
-
-        //render the button background
-        renderStack.push({
-          mode: "fill",
-          path: path,
-          color: button.color,
-          stage: stage,
-          translated: true
-        })
-
-        //if the button has a border add it to the renderstack
-        if (button.border) {
-          renderStack.push({
-            mode: "line",
-            path: path,
-            color: button.border.color,
-            stage: stage,
-            translated: true,
-            lineWidth: (boxSize * button.border.width)
-          })  
-        }
-
-        //display the title if there is one, taking into acount cut corners
-        if (button.title) {
-          let title = button.title
-          let border = boxSize * ((button.border && button.border.width) ? button.border.width : 0)
-          fitText(
-            title.text,
-            boxX + (currentMenu.cutCorners ? boxSize * .1 : border),
-            boxY + (currentMenu.cutCorners ? boxSize * .1 : border),
-            boxSize - (currentMenu.cutCorners ? boxSize * .2 : border * 2),
-            boxSize - (currentMenu.cutCorners ? boxSize * .2 : border * 2),
-            stage,
-            title.color,
-            title.font
-            )
-        }
-      }
-    }
-  }
-  
 
   //render the render stack
   function renderRenderStack() {
@@ -686,38 +834,42 @@ function render(inputOptions) {
   }
 
   clear()
-  stackMenus()
+  Menu.render()
   renderRenderStack()
 }
 
 //for detecting clicks on the like
 function menuFunctions() {
-  let currentMenu = menu
-  let mouse = playerInputs.mousePosistion
 
-  //run for each button
-  for (let index in currentMenu.buttons) {
-    let button = currentMenu.buttons[index]
-    let x = button.posistion.x
-    let y = button.posistion.y
-    let size = button.size
+  //run for each open menu
+  for (let menuIndex in openMenus) {
+    let currentMenu = openMenus[menuIndex]
+    let mouse = playerInputs.mousePosistion
 
-    //check if the mouse is over it
-    if (mouse.x >= x && mouse.x <= x + size && mouse.y >= y && mouse.y <= y + size) {
+    //run for each button
+    for (let index in currentMenu.buttons) {
+      let button = currentMenu.buttons[index]
+      let x = button.posistion.x
+      let y = button.posistion.y
+      let size = button.size
 
-      //update the targeted state for use by the button
-      button.targeted = true
+      //check if the mouse is over it
+      if (mouse.x >= x && mouse.x <= x + size && mouse.y >= y && mouse.y <= y + size) {
 
-      //run onClick functions when the button is clicked
-      if (playerInputs.buttons["mouseLeft"]) {
-        button.mouseDown = true
-      } else if (button.mouseDown == true) {
-        button.mouseDown = false
-        if (button.functions && button.functions.onClick) {
-          button.functions.onClick(button, currentMenu)
+        //update the targeted state for use by the button
+        button.targeted = true
+
+        //run onClick functions when the button is clicked
+        if (playerInputs.buttons["mouseLeft"]) {
+          button.mouseDown = true
+        } else if (button.mouseDown == true) {
+          button.mouseDown = false
+          if (button.functions && button.functions.onClick) {
+            button.functions.onClick(button, currentMenu)
+          }
         }
-      }
-    } else { button.targeted = false; button.mouseDown = false }
+      } else { button.targeted = false; button.mouseDown = false }
+    }
   }
 }
 
@@ -770,4 +922,7 @@ function update(inputTime) {
   updateindex++
   requestAnimationFrame(update)
 }
+
+Menu.open(menus.varTest)
+
 requestAnimationFrame(update)
