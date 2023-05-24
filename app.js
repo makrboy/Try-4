@@ -296,8 +296,7 @@ let menu = {
         self.location.y = canvas.height * .1
       },
       onOpen: function(self) {},
-      onClose: function(self) {},
-      onResize: function(self) {}
+      onClose: function(self) {}
   }
 }
 
@@ -324,6 +323,7 @@ function render(inputOptions) {
   function stackMenus() {
     let currentMenu = menu
 
+    //run the menus onRender function
     if (currentMenu.functions && currentMenu.functions.onRender) {
       currentMenu.functions.onRender(currentMenu)
     }
@@ -477,16 +477,21 @@ function render(inputOptions) {
       translated: true
     })
 
-    //if the menu has a border add it
+    //if the menu has a border add it, then make height and y take title space into acount
     if (currentMenu.border) {
+      const border = currentMenu.border
       renderStack.push({
         mode: "line",
         path: path,
-        color: currentMenu.border.color,
+        color: border.color,
         stage: currentMenu.stage,
         translated: true,
-        lineWidth: currentMenu.border.width * Math.min(size.x, size.y)
+        lineWidth: border.width * Math.min(size.x, size.y)
       })
+      x += border.width * Math.min(size.x, size.y)
+      y += border.width * Math.min(size.x, size.y)
+      width -= border.width * Math.min(size.x, size.y) * 2
+      height -= border.width * Math.min(size.x, size.y) * 2
     }
 
     //if the menu has a title, display it and make height and y take title space into acount
@@ -506,6 +511,7 @@ function render(inputOptions) {
         height *= (1 - title.size)
     }
 
+    //run any buttons onRender functions
     for (let index in currentMenu.buttons) {
       let button = currentMenu.buttons[index]
       if (button.functions && button.functions.onRender) {
@@ -586,12 +592,13 @@ function render(inputOptions) {
         //display the title if there is one, taking into acount cut corners
         if (button.title) {
           let title = button.title
+          let border = boxSize * ((button.border && button.border.width) ? button.border.width : 0)
           fitText(
             title.text,
-            boxX + (currentMenu.cutCorners ? boxSize * .1 : 0),
-            boxY + (currentMenu.cutCorners ? boxSize * .1 : 0),
-            boxSize - (currentMenu.cutCorners ? boxSize * .2 : 0),
-            boxSize - (currentMenu.cutCorners ? boxSize * .2 : 0),
+            boxX + (currentMenu.cutCorners ? boxSize * .1 : border),
+            boxY + (currentMenu.cutCorners ? boxSize * .1 : border),
+            boxSize - (currentMenu.cutCorners ? boxSize * .2 : border * 2),
+            boxSize - (currentMenu.cutCorners ? boxSize * .2 : border * 2),
             stage,
             title.color,
             title.font
