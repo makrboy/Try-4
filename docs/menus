@@ -1,0 +1,70 @@
+Menus are a simple system that works as a flexable GUI,
+All a menu is is a list of buttons, a title, and functions,
+These functions are what make these menus usefull,
+There are onOpen, onClose, onRender, and onClick functions
+The general menu layout is this:
+
+name: { the name of the menu
+    cutCorners: true, if true all buttons will have their corner cut
+    stage: 10, stage of the menu
+    size: { size of the menu
+        x: 500,
+        y: 500
+    },
+    location: { the top left corner of the menu
+        x: 100,
+        y: 100
+    },
+    backgroundColor: [0,0,0,.75], the color of the menu background
+    border: { an optional border around the menu
+        width: .015, the width of the border 0-1
+        color: [50,50,50,.75] the color of the border
+    },
+    title: { an optional object for a title
+        text: "Menu text", text to display on the top of the menu
+        color: [200,200,200], the color of the text
+        size: .2, the max size the text can take up 0-1
+        font: "Times" the font for the text
+    },
+    padding: .05, how much space between buttons 0-1
+    buttons: [ an array of all the buttons
+    {
+        border: { an optional border for the button
+            width: .1, how much of the button should be border 0-1
+            color: [0,0,0,.75] the color of the button
+        },
+        color: [0,255,0], the color of the button
+        title: { an optional title for the button
+            text: "Button text", the text for said title
+            color: [0,0,0] and the color of the text
+        },
+        functions: { all the functions that make it great, self is the button, menu is the menu
+            onRender: function(self, menu) {}, runs before being rendered
+            onClick: function(self, menu) {} runs when it is clicked
+        }
+    },
+    ],
+    functions: { the functions for the menu
+        onRender: function(self, menu) {}, runs at the start of the render
+        onOpen: function(self, menu) {},runs when Menu.open is called
+        onClose: function(self, menu) {} runs when Menu.ckise is called
+    }
+}
+
+The order of things being added to the renderStack and functions:
+
+    menu onOpen()
+    menu onRender()
+    r+= menu background
+    r+= menu border
+    r+= menu title
+    button onRender()
+    r+= button background
+    r+= button border
+    r+= button text
+
+Here are some usefull functions:
+
+    goes in button onRender
+    self.color = (self.targeted[3] ? .5 : 1)
+    this will make the buttons darker looking when the mouse is over them

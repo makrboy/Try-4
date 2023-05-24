@@ -29,7 +29,7 @@ const todo = {
   "Detect when the mouse is over an button in the menu" : "Done",
   "Make the buttons clickable" : "Done",
   "Add on open / on closed functions for the menu" : "Done",
-  "Make menus draggable" : "Planned",
+  "Add docs for menus" : "Done",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
   "Add support for convex shapes" : "Planned",
@@ -153,7 +153,7 @@ const Menu = {
   },
   
   //turn the all the open menus into render stack entries
-  render() {
+  render: function() {
 
     //run for each open menu
     for (let menuIndex in openMenus) {
@@ -355,8 +355,10 @@ const Menu = {
         }
       }
 
-      //calculate how big the boxes can be, as well as how to arrange them
+      //next the buttons
       if (currentMenu.buttons.length > 0) {
+        
+        //calculate how big the boxes can be, as well as how to arrange them
         const sizes = []
         for (let i = 1; i <= count; i++) {
             let cols = i

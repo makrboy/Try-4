@@ -1,0 +1,16 @@
+The render stack is an array of objects, each object is an entry to be rendered.
+There are two types of entry: line and fill, shaped like so:
+
+    stage : 5.2 -------------------------------------- entries are rendered in order of stage, lowest first
+    translated : false || true ----------------------- if translated is true it draws exactly according to the path (text always needs pre-translation)
+    size : 100 --------------------------------------- the number everything in path is multiplied by of translated is false
+    path : [{x:0,y:0},{x:1,y:1},{x:1,y:0,jump:true}] - path is an array of points with an x and y, jump means to do moveTo instead of lineTo when moving to said point
+    mode : fill || line || text ---------------------- whether to fill the shape or draw lines, or draw text
+    color : [255,100,0,.5] --------------------------- the color in rgba format
+    lineWidth : .25 ---------------------------------- the width of the line (if on line mode), will be multiplied by size if translated is false (only needed for line mode)
+    x : 100 ------------------------------------------ where a point of 0,0 should be drawn, or the upper left corner of the shape, ignored if translated is true
+    y : 100 ------------------------------------------ where a point of 0,0 should be drawn, or the upper left corner of the shape, ignored if translated is true
+    font : Arial ------------------------------------- the font to use when rendering text (only needed for text)
+    text : Hello. World! ----------------------------- the text to display if on text mode (only needed for text)
+
+One thing to note is that when rendering text all that is needed is the stage, size, color, x, y, font, and text
