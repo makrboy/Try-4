@@ -11,7 +11,7 @@ name: { the name of the menu
         x: 500,
         y: 500
     },
-    location: { the top left corner of the menu
+    posistion: { the top left corner of the menu
         x: 100,
         y: 100
     },
@@ -65,6 +65,50 @@ The order of things being added to the renderStack and functions:
 
 Here are some usefull functions:
 
-    goes in button onRender
+this will make the buttons darker looking when the mouse is over them
     self.color = (self.targeted[3] ? .5 : 1)
-    this will make the buttons darker looking when the mouse is over them
+goes in button onRender
+
+this will make the menu draggable
+    let files = self.files
+
+    //set the posistion of the menu
+    self.posistion.x = files.targetX - files.offsetX
+    self.posistion.y = files.targetY - files.offsetY
+
+    //run on the first loop after mouseDown
+    if ((!files.moving) && self.mouseDown) {
+
+        //record the offset of the mouse to the menu
+        files.moving = true
+        files.offsetX = playerInputs.mousePosistion.x - files.targetX
+        files.offsetY = playerInputs.mousePosistion.y - files.targetY
+    }
+
+    //move the menu to the mouse
+    if (files.moving) {
+        files.targetX = playerInputs.mousePosistion.x
+        files.targetY = playerInputs.mousePosistion.y
+    }
+
+    //run when the mouse button is released
+    if (!playerInputs.buttons["mouseLeft"]) {
+
+        //reset everything
+        files.moving = false
+        files.targetX -= files.offsetX
+        files.targetY -= files.offsetY
+        files.offsetX = 0
+        files.offsetY = 0
+    }
+    
+goes in menu onRender
+
+    //set initial states for moving menu
+    if (!self.files) { self.files = {} }
+    let files = self.files
+    files.moving = false
+    files.targetX = canvas.width * .2
+    files.targetY = canvas.height * .2
+    files.offsetX = 0
+    files.offsetY = 0

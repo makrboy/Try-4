@@ -30,6 +30,7 @@ const todo = {
   "Make the buttons clickable" : "Done",
   "Add on open / on closed functions for the menu" : "Done",
   "Add docs for menus" : "Done",
+  "Make a draggable menu" : "Done",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
   "Add support for convex shapes" : "Planned",
@@ -168,9 +169,9 @@ const Menu = {
       let size = currentMenu.size
       let width = size.x
       let height = size.y
-      let location = currentMenu.location
-      let x = location.x
-      let y = location.y
+      let posistion = currentMenu.posistion
+      let x = posistion.x
+      let y = posistion.y
       let stage = currentMenu.stage
       let padding = currentMenu.padding
       let path
@@ -456,7 +457,7 @@ let menus = {
         x: 500,
         y: 500
     },
-    location: {
+    posistion: {
         x: 100,
         y: 100
     },
@@ -577,8 +578,8 @@ let menus = {
         onRender: function(self) {
           self.size.x = canvas.width * .8
           self.size.y = canvas.height * .8
-          self.location.x = canvas.width * .1
-          self.location.y = canvas.height * .1
+          self.posistion.x = canvas.width * .1
+          self.posistion.y = canvas.height * .1
         },
         onOpen: function(self) {},
         onClose: function(self) {}
@@ -591,7 +592,7 @@ let menus = {
         x: 500,
         y: 500
     },
-    location: {
+    posistion: {
         x: 100,
         y: 100
     },
@@ -625,7 +626,7 @@ let menus = {
             },
             onClick: function(self, menu) {
               backgroundTransparency = Math.max(Math.round((backgroundTransparency-0.1)*10)/10, 0)
-              menu.functions.onOpen(menu)
+              menu.title.text = "Current Background Transparency is "+backgroundTransparency
             }
         }
       },
@@ -665,24 +666,66 @@ let menus = {
             },
             onClick: function(self, menu) {
               backgroundTransparency = Math.min(Math.round((backgroundTransparency+0.1)*10)/10, 1)
-              menu.functions.onOpen(menu)
+              menu.title.text = "Current Background Transparency is "+backgroundTransparency
             }
         }
       },
     ],
     functions: {
-        onRender: function(self) {
-          self.size.x = canvas.width * .6
-          self.size.y = canvas.height * .6
-          self.location.x = canvas.width * .2
-          self.location.y = canvas.height * .2
-        },
-        onOpen: function(self) {
-          self.title.text = "Current Background Transparency is "+backgroundTransparency
-        },
-        onClose: function(self) {}
-    }
+      onRender: function(self) {
+        let files = self.files
 
+        self.size.x = canvas.width * .6
+        self.size.y = canvas.height * .6
+
+        //set the posistion of the menu
+        self.posistion.x = files.targetX - files.offsetX
+        self.posistion.y = files.targetY - files.offsetY
+
+        //run on the first loop after mouseDown
+        if ((!files.moving) && self.mouseDown) {
+
+          //record the offset of the mouse to the menu
+          files.moving = true
+          files.offsetX = playerInputs.mousePosistion.x - files.targetX
+          files.offsetY = playerInputs.mousePosistion.y - files.targetY
+        }
+
+        //move the menu to the mouse
+        if (files.moving) {
+          files.targetX = playerInputs.mousePosistion.x
+          files.targetY = playerInputs.mousePosistion.y
+        }
+
+        //run when the mouse button is released
+        if (!playerInputs.buttons["mouseLeft"]) {
+
+          //reset everything
+          files.moving = false
+          files.targetX -= files.offsetX
+          files.targetY -= files.offsetY
+          files.offsetX = 0
+          files.offsetY = 0
+        }
+
+      },
+      onOpen: function(self) {
+        self.title.text = "Current Background Transparency is "+backgroundTransparency
+
+        //set initial states for moving menu
+        if (!self.files) { self.files = {} }
+        let files = self.files
+        files.moving = false
+        files.targetX = canvas.width * .2
+        files.targetY = canvas.height * .2
+        files.offsetX = 0
+        files.offsetY = 0
+      
+      },
+      onClose: function(self) {},
+      onClick: function(self) {
+      }
+    }
   }
 }
 
@@ -848,14 +891,37 @@ function menuFunctions() {
     let currentMenu = openMenus[menuIndex]
     let mouse = playerInputs.mousePosistion
 
+    let x = currentMenu.posistion.x
+    let y = currentMenu.posistion.y
+    let width = currentMenu.size.x
+    let height = currentMenu.size.y
+
+    if (mouse.x >= x && mouse.x <= x + width && mouse.y >= y && mouse.y <= y + height) {
+
+      //update the targeted state for use by the currentMenu
+      currentMenu.targeted = true
+
+      //run onClick functions when the currentMenu is clicked
+      if (playerInputs.buttons["mouseLeft"]) {
+        currentMenu.mouseDown = true
+      } else if (currentMenu.mouseDown == true) {
+        currentMenu.mouseDown = false
+        if (currentMenu.functions && currentMenu.functions.onClick) {
+          currentMenu.functions.onClick(currentMenu)
+        }
+      }
+    } else { currentMenu.targeted = false; currentMenu.mouseDown = false }
+
     //run for each button
     for (let index in currentMenu.buttons) {
       let button = currentMenu.buttons[index]
+
+      //check if the mouse is over the menu
       let x = button.posistion.x
       let y = button.posistion.y
       let size = button.size
 
-      //check if the mouse is over it
+      //check if the mouse is over the button
       if (mouse.x >= x && mouse.x <= x + size && mouse.y >= y && mouse.y <= y + size) {
 
         //update the targeted state for use by the button
