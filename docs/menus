@@ -49,24 +49,18 @@ name: { the name of the menu
         onOpen(self, menu) {},runs when Menu.open is called
         onClose(self, menu) {} runs when Menu.ckise is called
     },
-    modules: [ this is a list of modules to apply to the menu
-        "moduleName"
-        "moduleName"
-        "moduleName" 
-    ]
+    modules: { this is a list of modules to apply to the menu
+        "moduleName" : {input}
+        "moduleName2" : {input}
+        "moduleName3" : {input}
+    }
 }
 
-todo
-menu onOpen
-menu onClose
-menu onRender
-menu onClick
-button onClick
 
-Modules are the 
+Modules are the built like this:
 
 moduleName: {
-    onRender(self, menu) {} //replace onRender for the name of the function you want to run this at
+    onRender(self, menu, inputs) {} //replace onRender for the name of the function you want to run this at
 }
 
 
