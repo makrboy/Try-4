@@ -39,31 +39,53 @@ name: { the name of the menu
             color: [0,0,0] and the color of the text
         },
         functions: { all the functions that make it great, self is the button, menu is the menu
-            onRender: function(self, menu) {}, runs before being rendered
-            onClick: function(self, menu) {} runs when it is clicked
+            onRender(self, menu) {}, runs before being rendered
+            onClick(self, menu) {} runs when it is clicked
         }
     },
     ],
     functions: { the functions for the menu
-        onRender: function(self, menu) {}, runs at the start of the render
-        onOpen: function(self, menu) {},runs when Menu.open is called
-        onClose: function(self, menu) {} runs when Menu.ckise is called
-    }
+        onRender(self, menu) {}, runs at the start of the render
+        onOpen(self, menu) {},runs when Menu.open is called
+        onClose(self, menu) {} runs when Menu.ckise is called
+    },
+    modules: [ this is a list of modules to apply to the menu
+        "moduleName"
+        "moduleName"
+        "moduleName" 
+    ]
 }
+
+todo
+menu onOpen
+menu onClose
+menu onRender
+menu onClick
+button onClick
+
+Modules are the 
+
+moduleName: {
+    onRender(self, menu) {} //replace onRender for the name of the function you want to run this at
+}
+
 
 The order of things being added to the renderStack and functions:
 
     menu onOpen()
+    menu onOpen modules
     menu onRender()
+    menu onRender modules
     r+= menu background
     r+= menu border
     r+= menu title
     button onRender()
+    button onRender modules
     r+= button background
     r+= button border
     r+= button text
 
-Here are some usefull functions:
+Here are some useful functions:
 
 this will make the buttons darker looking when the mouse is over them
     self.color = (self.targeted[3] ? .5 : 1)

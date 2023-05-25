@@ -31,6 +31,7 @@ const todo = {
   "Add on open / on closed functions for the menu" : "Done",
   "Add docs for menus" : "Done",
   "Make a draggable menu" : "Done",
+  "Add menu modules" : "In Progress",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
   "Add support for convex shapes" : "Planned",
@@ -136,7 +137,7 @@ let vieport = {
 const Menu = {
 
   //runs any onOpen functions and adds the menu to openMenus
-  open: function(menu) {
+  open(menu) {
     if (menu.functions && menu.functions.onOpen) {
       menu.functions.onOpen(menu)
     }
@@ -144,7 +145,7 @@ const Menu = {
   },
 
   //runs any onClose functions and removes the menu from openMenus
-  close: function(menu) {
+  close(menu) {
     if (menu.functions && menu.functions.onClose) {
       menu.functions.onClose(menu)
     }
@@ -154,7 +155,7 @@ const Menu = {
   },
   
   //turn the all the open menus into render stack entries
-  render: function() {
+  render() {
 
     //run for each open menu
     for (let menuIndex in openMenus) {
@@ -354,6 +355,16 @@ const Menu = {
         if (button.functions && button.functions.onRender) {
           button.functions.onRender(button,currentMenu)
         }
+
+        //check for modules
+        if (button.modules) {
+
+          //run for each module
+          for (let moduleIndex in button.modules) {
+            let moduleName = button.modules[moduleIndex]
+            menuModules[moduleName].onRender(button,currentMenu)
+          }
+        }
       }
 
       //next the buttons
@@ -446,9 +457,23 @@ const Menu = {
         }
       }
     }
+  },
+}
+
+let menuModules = {
+  hoverTint: { //when you hover over the button its alpha is reduced
+    onRender(self) {
+      if (!self.color[3]) { self.color[3] = 1 }
+      if (self.targeted) {
+        self.color[3] = Math.max(self.color[3] - .05, .5)
+      } else {
+        self.color[3] = Math.min(self.color[3] + .05, 1)
+      }
+    }
   }
 }
 
+//a place to store menus
 let menus = {
   buttonTest: {
     cutCorners: true,
@@ -486,10 +511,10 @@ let menus = {
             color: [0,0,0]
         },
         functions: {
-            onRender: function(self, menu) {
+            onRender(self, menu) {
               self.color = (self.targeted ? [150,150,150] : [255,255,255])
             },
-            onClick: function(self, menu) {
+            onClick(self, menu) {
               Menu.close(menu)
               Menu.open(menus.varTest)
             }
@@ -506,10 +531,10 @@ let menus = {
               color: [0,0,0]
           },
           functions: {
-              onRender: function(self, menu) {
+              onRender(self, menu) {
                 self.color = (self.targeted ? [0,150,0] : [0,255,0])
               },
-              onClick: function(self, menu) {
+              onClick(self, menu) {
                 const fonts = [
                   'Arial',
                   'Helvetica',
@@ -539,10 +564,10 @@ let menus = {
                         color: [0,0,0]
                     },
                     functions: {
-                        onRender: function(self, menu) {
+                        onRender(self, menu) {
                           self.color = (self.targeted ? [150,0,0] : [255,0,0])
                         },
-                        onClick: function(self, menu) {
+                        onClick(self, menu) {
                           menu.buttons.pop() 
                         }
                       }
@@ -561,10 +586,10 @@ let menus = {
                         font: font
                     },
                     functions: {
-                      onRender: function(self, menu) {
+                      onRender(self, menu) {
                         self.color[3] = (self.targeted ? .5 : 1)
                       },
-                      onClick: function(self, menu) {
+                      onClick(self, menu) {
                         self.color = [Math.random()*255,Math.random()*255,Math.random()*255]
                       }
                     }
@@ -575,14 +600,14 @@ let menus = {
       },
     ],
     functions: {
-        onRender: function(self) {
+        onRender(self) {
           self.size.x = canvas.width * .8
           self.size.y = canvas.height * .8
           self.posistion.x = canvas.width * .1
           self.posistion.y = canvas.height * .1
         },
-        onOpen: function(self) {},
-        onClose: function(self) {}
+        onOpen(self) {},
+        onClose(self) {}
     }
   },
   varTest: {
@@ -621,10 +646,10 @@ let menus = {
             color: [0,0,0]
         },
         functions: {
-            onRender: function(self, menu) {
+            onRender(self, menu) {
               self.color = (self.targeted ? [0,0,150] : [0,0,255])
             },
-            onClick: function(self, menu) {
+            onClick(self, menu) {
               backgroundTransparency = Math.max(Math.round((backgroundTransparency-0.1)*10)/10, 0)
               menu.title.text = "Current Background Transparency is "+backgroundTransparency
             }
@@ -641,10 +666,10 @@ let menus = {
             color: [0,0,0]
         },
         functions: {
-            onRender: function(self, menu) {
+            onRender(self, menu) {
               self.color = (self.targeted ? [150,150,150] : [255,255,255])
             },
-            onClick: function(self, menu) {
+            onClick(self, menu) {
               Menu.close(menu)
               Menu.open(menus.buttonTest)
             }
@@ -661,10 +686,10 @@ let menus = {
             color: [0,0,0]
         },
         functions: {
-            onRender: function(self, menu) {
+            onRender(self, menu) {
               self.color = (self.targeted ? [0,0,150] : [0,0,255])
             },
-            onClick: function(self, menu) {
+            onClick(self, menu) {
               backgroundTransparency = Math.min(Math.round((backgroundTransparency+0.1)*10)/10, 1)
               menu.title.text = "Current Background Transparency is "+backgroundTransparency
             }
@@ -672,7 +697,7 @@ let menus = {
       },
     ],
     functions: {
-      onRender: function(self) {
+      onRender(self) {
         let files = self.files
 
         self.size.x = canvas.width * .6
@@ -709,7 +734,7 @@ let menus = {
         }
 
       },
-      onOpen: function(self) {
+      onOpen(self) {
         self.title.text = "Current Background Transparency is "+backgroundTransparency
 
         //set initial states for moving menu
@@ -722,11 +747,67 @@ let menus = {
         files.offsetY = 0
       
       },
-      onClose: function(self) {},
-      onClick: function(self) {
+      onClose(self) {},
+      onClick(self) {
       }
     }
-  }
+  },
+  moduleTest: {
+    cutCorners: true,
+    stage: 10,
+    size: {
+        x: 500,
+        y: 500
+    },
+    posistion: {
+        x: 100,
+        y: 100
+    },
+    draggable: false,
+    backgroundColor: [0,0,0,.75],
+    border: {
+        width: .015,
+        color: [50,50,50,.75]
+    },
+    title: {
+        text: "Module Testing Menu",
+        color: [200,200,200],
+        size: .2,
+        font: "Times"
+    },
+    padding: .05,
+    buttons: [
+      {
+        border: {
+            width: .1,
+            color: [0,0,0,.75]
+        },
+        color: [0,255,0],
+        title: {
+            text: "I don't do anything",
+            color: [0,0,0]
+        },
+        functions: {
+            onRender(self, menu) {},
+            onClick(self, menu) {}
+        },
+        modules: [
+          "hoverTint"
+        ]
+      },
+    ],
+    functions: {
+      onRender(self) {
+        self.size.x = canvas.width * .8
+        self.size.y = canvas.height * .8
+        self.posistion.x = canvas.width * .1
+        self.posistion.y = canvas.height * .1
+    },
+      onOpen(self) {},
+      onClose(self) {},
+      onClick(self) {}
+    }
+  },
 }
 
 //make the canvas always fill the screen
@@ -991,6 +1072,6 @@ function update(inputTime) {
   requestAnimationFrame(update)
 }
 
-Menu.open(menus.varTest)
+Menu.open(menus.moduleTest)
 
 requestAnimationFrame(update)
