@@ -31,7 +31,7 @@ const todo = {
   "Add docs for menus" : "Done",
   "Make a draggable menu" : "Done",
   "Add menu modules" : "Done",
-  "Make mouseDown / onClick respect menu layering" : "Planned",
+  "Make mouseDown / onClick respect menu layering" : "Done",
   "Find why buttons sometimes lose their posistion" : "Planned",
   "Add Matter" : "Planned",
   "Create a shape library" : "Planned",
@@ -521,49 +521,19 @@ const Menu = {
   //for checking if the mouse is over a menu / button / clicking the menu / button
   checkMouse() {
 
+    //set this once for finding the top button / menu
+    let topLayer = true
+
     //run for each open menu
-    for (let menuIndex in openMenus) {
-      let currentMenu = openMenus[menuIndex]
+    for (let menuIndex = 0; menuIndex < openMenus.length; menuIndex++) {
+      let currentMenu = openMenus[openMenus.length-menuIndex-1]
       let mouse = playerInputs.mousePosistion
   
       let x = currentMenu.posistion.x
       let y = currentMenu.posistion.y
       let width = currentMenu.size.x
       let height = currentMenu.size.y
-  
-      if (mouse.x >= x && mouse.x <= x + width && mouse.y >= y && mouse.y <= y + height) {
-  
-        //update the targeted state for use by the currentMenu
-        currentMenu.targeted = true
-  
-        //run onClick functions when the currentMenu is clicked
-        if (playerInputs.buttons["mouseLeft"]) {
-          currentMenu.mouseDown = true
-        } else if (currentMenu.mouseDown == true) {
-          currentMenu.mouseDown = false
-  
-          //run onClick functions in the menu
-          if (currentMenu.functions && currentMenu.functions.onClick) {
-            currentMenu.functions.onClick(currentMenu)
-          }
-  
-          //check for modules
-          if (currentMenu.modules) {
-  
-            //run for each module
-            for (let moduleName in currentMenu.modules) {
-              let module = menuModules[moduleName]
-              let input = currentMenu.modules[moduleName]
-  
-              //run the function here
-              if (module.onClick) {
-                module.onClick(currentMenu,currentMenu,input)
-              }
-            }
-          }
-        }
-      } else { currentMenu.targeted = false; currentMenu.mouseDown = false }
-  
+      
       //run for each button
       for (let index in currentMenu.buttons) {
         let button = currentMenu.buttons[index]
@@ -574,43 +544,92 @@ const Menu = {
           //check if the mouse is over the menu
           let x = button.posistion.x
           let y = button.posistion.y
-          let size = button.size
-    
-          //check if the mouse is over the button
+          let size = button.size    
           if (mouse.x >= x && mouse.x <= x + size && mouse.y >= y && mouse.y <= y + size) {
     
-            //update the targeted state for use by the button
-            button.targeted = true
+            //only run onClick functions if topLayer
+            if (topLayer == true) {
+
+              //update the targeted state for use by the button
+              button.targeted = true
     
-            //run onClick functions when the button is clicked
-            if (playerInputs.buttons["mouseLeft"]) {
-              button.mouseDown = true
-            } else if (button.mouseDown == true) {
-              button.mouseDown = false
-    
-              //run the buttons onClick function
-              if (button.functions && button.functions.onClick) {
-                button.functions.onClick(button, currentMenu)
-              }
-    
-              //check for modules
-              if (button.modules) {
-    
-                //run for each module
-                for (let moduleName in button.modules) {
-                  let module = menuModules[moduleName]
-                  let input = button.modules[moduleName]
-    
-                  //run the function here
-                  if (module.onClick) {
-                    module.onClick(button,currentMenu,input)
+              //run onClick functions when the button is clicked
+              if (playerInputs.buttons["mouseLeft"]) {
+                button.mouseDown = true
+              } else if (button.mouseDown == true) {
+                button.mouseDown = false
+      
+                //run the buttons onClick function
+                if (button.functions && button.functions.onClick) {
+                  button.functions.onClick(button, currentMenu)
+                }
+      
+                //check for modules
+                if (button.modules) {
+      
+                  //run for each module
+                  for (let moduleName in button.modules) {
+                    let module = menuModules[moduleName]
+                    let input = button.modules[moduleName]
+      
+                    //run the function here
+                    if (module.onClick) {
+                      module.onClick(button,currentMenu,input)
+                    }
                   }
+                }
+
+                //set topLayer to false
+                topLayer = false
+              }
+
+              //set topLayer to false
+              topLayer = false
+            } else { button.targeted = false; button.mouseDown = false }
+          } else { button.targeted = false; button.mouseDown = false }
+        } else { button.targeted = false; button.mouseDown = false }
+      }
+
+      //check if the mouse is over the menu
+      if (mouse.x >= x && mouse.x <= x + width && mouse.y >= y && mouse.y <= y + height) {
+  
+        //only run onClick functions if top layer
+        if (topLayer) {
+
+          //update the targeted state for use by the currentMenu
+          currentMenu.targeted = true
+        
+          //run onClick functions when the currentMenu is clicked
+          if (playerInputs.buttons["mouseLeft"]) {
+            currentMenu.mouseDown = true
+          } else if (currentMenu.mouseDown == true) {
+            currentMenu.mouseDown = false
+    
+            //run onClick functions in the menu
+            if (currentMenu.functions && currentMenu.functions.onClick) {
+              currentMenu.functions.onClick(currentMenu)
+            }
+    
+            //check for modules
+            if (currentMenu.modules) {
+    
+              //run for each module
+              for (let moduleName in currentMenu.modules) {
+                let module = menuModules[moduleName]
+                let input = currentMenu.modules[moduleName]
+    
+                //run the function here
+                if (module.onClick) {
+                  module.onClick(currentMenu,currentMenu,input)
                 }
               }
             }
-          } else { button.targeted = false; button.mouseDown = false }
+          }
+
+          //set topLayer to false
+          topLayer = false
         }
-      }
+      } else { currentMenu.targeted = false; currentMenu.mouseDown = false }
     }
   }
 }
@@ -620,7 +639,7 @@ let menuModules = {
     onRender(self, menu, input) {
       const options = {
         min: .5,
-        speed: .05,
+        speed: .5,
         ...input
       }
       if (self.color.length==3) { self.color[3] = 1 }
@@ -640,7 +659,7 @@ let menuModules = {
       self.posistion.y = files.targetY - files.offsetY
 
       //run on the first loop after mouseDown
-      if ((!files.moving) && self.mouseDown) {
+      if ((!files.moving) && self.mouseDown && self.targeted && (files.lastMouseDown)) {
 
         //record the offset of the mouse to the menu
         files.moving = true
@@ -653,6 +672,9 @@ let menuModules = {
         files.targetX = playerInputs.mousePosistion.x
         files.targetY = playerInputs.mousePosistion.y
       }
+
+      //record if the mouse was down last loop
+      files.lastMouseDown = (playerInputs.buttons["mouseLeft"]>0)
 
       //run when the mouse button is released
       if (!playerInputs.buttons["mouseLeft"]) {
@@ -675,6 +697,7 @@ let menuModules = {
       files.targetY = self.posistion.y
       files.offsetX = 0
       files.offsetY = 0
+      files.lastMouseDown = false
     }
   },
   dynamicSize: { //make the menu fill the screen
@@ -695,6 +718,18 @@ let menuModules = {
       if (options.scaleMenu) {
         self.size.x = canvas.width * options.fillX
         self.size.y = canvas.height * options.fillY
+      }
+    }
+  },
+  clickToTop: { //move the menu to the top when clicked
+    onClick(self) {
+      const menu = self
+      for (let index in openMenus) {
+        if (openMenus[index] == self) {
+          openMenus.splice(index,1)
+          openMenus.push(menu)
+          break
+        }
       }
     }
   }
@@ -1090,7 +1125,8 @@ let menus = {
               },
               modules: {
                 draggable : null,
-                dynamicSize : {moveMenu: false, fillX: .2, fillY: .2}
+                dynamicSize : {moveMenu: false, fillX: .2, fillY: .2},
+                clickToTop: null
               }
             })
           }
@@ -1108,7 +1144,8 @@ let menus = {
     },
     modules: {
       draggable : null,
-      dynamicSize : {moveMenu: false, fillX: .6, fillY: .6}
+      dynamicSize : {moveMenu: false, fillX: .6, fillY: .6},
+      clickToTop: null
     }
   },
 }
