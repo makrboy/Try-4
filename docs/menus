@@ -1,7 +1,7 @@
 Menus are a simple system that works as a flexable GUI,
 All a menu is is a list of buttons, a title, and functions,
 These functions are what make these menus usefull,
-There are onOpen, onClose, onRender, and onClick functions
+There are onOpen, onClose, onRender, and onClickUp functions
 The general menu layout is this:
 
 name: { the name of the menu
@@ -40,7 +40,7 @@ name: { the name of the menu
         },
         functions: { all the functions that make it great, self is the button, menu is the menu
             onRender(self, menu) {}, runs before being rendered
-            onClick(self, menu) {} runs when it is clicked
+            onClickUp(self, menu) {} runs when it is clicked
         }
     },
     ],

@@ -31,11 +31,12 @@ const todo = {
   "Add docs for menus": "Done",
   "Make a draggable menu": "Done",
   "Add menu modules": "Done",
-  "Make mouseDown / onClick respect menu layering": "Done",
-  "Find why buttons sometimes lose their posistion": "In Progress",
-  "Redo menu mouse detection": "In Progress",
-  "Redo menu function detection": "In Progress",
-  "Add onMouseDown / onMouseUp functions to menus / blocks": "In Progress",
+  "Make mouseDown / onClickUp respect menu layering": "Done",
+  "Find why buttons sometimes lose their posistion": "Done",
+  "Redo menu mouse detection": "Done",
+  "Redo menu function detection": "Done",
+  "Add onMouseDown / onMouseUp functions to menus / blocks": "Done",
+  "Make menu target selection take menus layer into account": "Planned",
   "Add Matter": "Planned",
   "Create a shape library": "Planned",
   "Add support for convex shapes": "Planned",
@@ -159,7 +160,7 @@ const Menu = {
 
       //run for each module
       for (let moduleName in menu.modules) {
-        let module = menuModules[moduleName]
+        let module = Menu.modules[moduleName]
         let input = menu.modules[moduleName]
 
         //run the function here
@@ -181,7 +182,7 @@ const Menu = {
 
       //run for each module
       for (let moduleName in menu.modules) {
-        let module = menuModules[moduleName]
+        let module = Menu.modules[moduleName]
         let input = menu.modules[moduleName]
 
         //run the function here
@@ -212,7 +213,7 @@ const Menu = {
 
         //run for each module
         for (let moduleName in currentMenu.modules) {
-          let module = menuModules[moduleName]
+          let module = Menu.modules[moduleName]
           let input = currentMenu.modules[moduleName]
 
           //run the function here
@@ -418,7 +419,7 @@ const Menu = {
 
           //run for each module
           for (let moduleName in button.modules) {
-            let module = menuModules[moduleName]
+            let module = Menu.modules[moduleName]
             let input = button.modules[moduleName]
 
             //run the function here
@@ -554,7 +555,7 @@ const Menu = {
               let output = {}
               output.self = currentButton
               output.type = "button"
-              output.parentMenu = currentButton
+              output.parentMenu = currentMenu
               output.parentMenuIndex = menuIndex
               output.buttonIndex = buttonIndex
               return output
@@ -586,232 +587,185 @@ const Menu = {
       return null
     }
 
-    let clickDown = playerInputs.buttons["mouseLeft"] ? true : false
-
-    let target = findTarget()
-
-    //change the color for testing
-    if (target) {
-      target.self[(target.type == "button" ? "color" : "backgroundColor")] = [Math.random() * 255, Math.random() * 255, Math.random() * 255, Math.random()]
+    //checks for the function and runs it
+    function runFunction(self, funcName, args) {
+      if (!self) { return }
+      if (!self.functions) { return }
+      if (!self.functions[funcName]) { return }
+      self.functions[funcName](...args)
     }
 
-    console.log(target)
+    //runs any module functions
+    function runModules(self, funkName) {
+      for (let moduleName in self.modules) {
+        let module = Menu.modules[moduleName]
+        let input = self.modules[moduleName]
 
-    //   //set this once for finding the top button / menu
-    //   let topLayer = true
+        //run the function here
+        if (module[funkName]) {
+          module[funkName](self, input)
+        }
+      }
 
-    //   //run for each open menu
-    //   for (let menuIndex = 0; menuIndex < openMenus.length; menuIndex++) {
-    //     let currentMenu = openMenus[openMenus.length-menuIndex-1]
-    //     let mouse = playerInputs.mousePosistion
+    }
 
-    //     let x = currentMenu.posistion.x
-    //     let y = currentMenu.posistion.y
-    //     let width = currentMenu.size.x
-    //     let height = currentMenu.size.y
+    //find the target
+    let target = findTarget()
 
-    //     //run for each button
-    //     for (let index in currentMenu.buttons) {
-    //       let button = currentMenu.buttons[index]
+    if (target) { target.self.targeted = true }
 
-    //       //for some reason buttons sometimes loose their posistion so check for that
-    //       if (button.posistion) {
+    //reset all the non target menu / buttons clickState to false
+    for (let menuIndex in openMenus) {
+      let currentMenu = openMenus[menuIndex]
+      if (target && currentMenu !== target.self) {
+        currentMenu.clickStake = false
+        currentMenu.targeted = false
+      }
+      for (let buttonIndex in currentMenu.buttons) {
+        let currentButton = currentMenu.buttons[buttonIndex]
+        if (target && currentButton !== target.self) {
+          currentButton.clickStake = false
+          currentButton.targeted = false
+        }
+      }
+    }
 
-    //         //check if the mouse is over the menu
-    //         let x = button.posistion.x
-    //         let y = button.posistion.y
-    //         let size = button.size    
-    //         if (mouse.x >= x && mouse.x <= x + size && mouse.y >= y && mouse.y <= y + size) {
+    //only run if there is a target
+    if (target) {
 
-    //           //only run onClick functions if topLayer
-    //           if (topLayer == true) {
+      //find the current mouse click state
+      let clickState = playerInputs.buttons["mouseLeft"] ? true : false
 
-    //             //update the targeted state for use by the button
-    //             button.targeted = true
+      //and the targets last
+      let lastClickState = target.self.clickStake
 
-    //             //run onClick functions when the button is clicked
-    //             if (playerInputs.buttons["mouseLeft"]) {
-    //               button.mouseDown = true
-    //             } else if (button.mouseDown == true) {
-    //               button.mouseDown = false
+      //set it to the current state
+      target.self.clickStake = clickState
 
-    //               //run the buttons onClick function
-    //               if (button.functions && button.functions.onClick) {
-    //                 button.functions.onClick(button, currentMenu)
-    //               }
+      //check for click down
+      if ((!lastClickState) && clickState) {
+        runFunction(target.self, "onClickUpDown", [target.self, target.parentMenu])
+        runModules(target.self, "onClickDown")
+      }
 
-    //               //check for modules
-    //               if (button.modules) {
-
-    //                 //run for each module
-    //                 for (let moduleName in button.modules) {
-    //                   let module = menuModules[moduleName]
-    //                   let input = button.modules[moduleName]
-
-    //                   //run the function here
-    //                   if (module.onClick) {
-    //                     module.onClick(button,currentMenu,input)
-    //                   }
-    //                 }
-    //               }
-
-    //               //set topLayer to false
-    //               topLayer = false
-    //             }
-
-    //             //set topLayer to false
-    //             topLayer = false
-    //           } else { button.targeted = false; button.mouseDown = false }
-    //         } else { button.targeted = false; button.mouseDown = false }
-    //       } else { button.targeted = false; button.mouseDown = false }
-    //     }
-
-    //     //check if the mouse is over the menu
-    //     if (mouse.x >= x && mouse.x <= x + width && mouse.y >= y && mouse.y <= y + height) {
-
-    //       //only run onClick functions if top layer
-    //       if (topLayer) {
-
-    //         //update the targeted state for use by the currentMenu
-    //         currentMenu.targeted = true
-
-    //         //run onClick functions when the currentMenu is clicked
-    //         if (playerInputs.buttons["mouseLeft"]) {
-    //           currentMenu.mouseDown = true
-    //         } else if (currentMenu.mouseDown == true) {
-    //           currentMenu.mouseDown = false
-
-    //           //run onClick functions in the menu
-    //           if (currentMenu.functions && currentMenu.functions.onClick) {
-    //             currentMenu.functions.onClick(currentMenu)
-    //           }
-
-    //           //check for modules
-    //           if (currentMenu.modules) {
-
-    //             //run for each module
-    //             for (let moduleName in currentMenu.modules) {
-    //               let module = menuModules[moduleName]
-    //               let input = currentMenu.modules[moduleName]
-
-    //               //run the function here
-    //               if (module.onClick) {
-    //                 module.onClick(currentMenu,currentMenu,input)
-    //               }
-    //             }
-    //           }
-    //         }
-
-    //         //set topLayer to false
-    //         topLayer = false
-    //       }
-    //     } else { currentMenu.targeted = false; currentMenu.mouseDown = false }
-    //   }
-  }
-}
-
-//all the modules for the menus
-let menuModules = {
-  hoverTint: { //when you hover over the button its alpha is reduced
-    // onRender(self, menu, input) {
-    //   const options = {
-    //     min: .5,
-    //     speed: .5,
-    //     ...input
-    //   }
-    //   if (self.color.length==3) { self.color[3] = 1 }
-    //   if (self.targeted) {
-    //     self.color[3] = Math.max(self.color[3] - options.speed, options.min)
-    //   } else {
-    //     self.color[3] = Math.min(self.color[3] + options.speed, 1)
-    //   }
-    // }
+      //check for click up
+      if (lastClickState && (!clickState)) {
+        runFunction(target.self, "onClickUp", [target.self, target.parentMenu])
+        runModules(target.self, "onClickUp")
+      }
+    }
   },
-  draggable: { //makes the menu draggable
-    // onRender(self) {
-    //   let files = self.files
 
-    //   //set the posistion of the menu
-    //   self.posistion.x = files.targetX - files.offsetX
-    //   self.posistion.y = files.targetY - files.offsetY
+  //all the modules for the menus
+  modules: {
 
-    //   //run on the first loop after mouseDown
-    //   if ((!files.moving) && 
-    //   (playerInputs.buttons["mouseLeft"]>0) && 
-    //   self.targeted && (!files.lastMouseDown)) {
+    //when you hover over the button its alpha is reduced
+    hoverTint: {
+      onRender(self, menu, input) {
+        const options = {
+          min: .5,
+          speed: .5,
+          ...input
+        }
+        if (self.color.length == 3) { self.color[3] = 1 }
+        if (self.targeted) {
+          self.color[3] = Math.max(self.color[3] - options.speed, options.min)
+        } else {
+          self.color[3] = Math.min(self.color[3] + options.speed, 1)
+        }
+      }
+    },
 
-    //     //record the offset of the mouse to the menu
-    //     files.moving = true
-    //     files.offsetX = playerInputs.mousePosistion.x - files.targetX
-    //     files.offsetY = playerInputs.mousePosistion.y - files.targetY
-    //   }
+    //makes the menu draggable
+    draggable: {
+      onRender(self) {
+        let files = self.files
 
-    //   //move the menu to the mouse
-    //   if (files.moving) {
-    //     files.targetX = playerInputs.mousePosistion.x
-    //     files.targetY = playerInputs.mousePosistion.y
-    //   }
+        //set the posistion of the menu
+        self.posistion.x = files.targetX - files.offsetX
+        self.posistion.y = files.targetY - files.offsetY
 
-    //   //record if the mouse was down last loop
-    //   files.lastMouseDown = (playerInputs.buttons["mouseLeft"]>0)
-    //   console.log(files.lastMouseDown)
+        //run on the first loop after mouseDown
+        if ((!files.moving) &&
+          (playerInputs.buttons["mouseLeft"] > 0) &&
+          self.targeted && (!files.lastMouseDown)) {
 
-    //   //run when the mouse button is released
-    //   if (!playerInputs.buttons["mouseLeft"]) {
+          //record the offset of the mouse to the menu
+          files.moving = true
+          files.offsetX = playerInputs.mousePosistion.x - files.targetX
+          files.offsetY = playerInputs.mousePosistion.y - files.targetY
+        }
 
-    //     //reset everything
-    //     files.moving = false
-    //     files.targetX -= files.offsetX
-    //     files.targetY -= files.offsetY
-    //     files.offsetX = 0
-    //     files.offsetY = 0
-    //   }
-    // },
-    // onOpen(self) {
+        //move the menu to the mouse
+        if (files.moving) {
+          files.targetX = playerInputs.mousePosistion.x
+          files.targetY = playerInputs.mousePosistion.y
+        }
 
-    //   //set initial states for moving menu
-    //   if (!self.files) { self.files = {} }
-    //   let files = self.files
-    //   files.moving = false
-    //   files.targetX = self.posistion.x
-    //   files.targetY = self.posistion.y
-    //   files.offsetX = 0
-    //   files.offsetY = 0
-    //   files.lastMouseDown = true
-    // }
-  },
-  dynamicSize: { //make the menu fill the screen
-    // onRender(self,input) {
-    //   const options = {
-    //     moveMenu: true,
-    //     scaleMenu: true,
-    //     fillX: .8,
-    //     fillY: .8,
-    //     offsetX: .1,
-    //     offsetY: .1,
-    //     ...input
-    //   }
-    //   if (options.moveMenu) {
-    //     self.posistion.x = canvas.width * options.offsetX
-    //     self.posistion.y = canvas.height * options.offsetY
-    //   }
-    //   if (options.scaleMenu) {
-    //     self.size.x = canvas.width * options.fillX
-    //     self.size.y = canvas.height * options.fillY
-    //   }
-    // }
-  },
-  clickToTop: { //move the menu to the top when clicked
-    // onClick(self) {
-    //   const menu = self
-    //   for (let index in openMenus) {
-    //     if (openMenus[index] == self) {
-    //       openMenus.splice(index,1)
-    //       openMenus.push(menu)
-    //       break
-    //     }
-    //   }
-    // }
+        //record if the mouse was down last loop
+        files.lastMouseDown = (playerInputs.buttons["mouseLeft"] > 0)
+
+        //run when the mouse button is released
+        if (!playerInputs.buttons["mouseLeft"]) {
+
+          //reset everything
+          files.moving = false
+          files.targetX -= files.offsetX
+          files.targetY -= files.offsetY
+          files.offsetX = 0
+          files.offsetY = 0
+        }
+      },
+      onOpen(self) {
+
+        //set initial states for moving menu
+        if (!self.files) { self.files = {} }
+        let files = self.files
+        files.moving = false
+        files.targetX = self.posistion.x
+        files.targetY = self.posistion.y
+        files.offsetX = 0
+        files.offsetY = 0
+        files.lastMouseDown = true
+      }
+    },
+
+    //make the menu fill the screen
+    dynamicSize: {
+      onRender(self, input) {
+        const options = {
+          moveMenu: true,
+          scaleMenu: true,
+          fillX: .8,
+          fillY: .8,
+          offsetX: .1,
+          offsetY: .1,
+          ...input
+        }
+        if (options.moveMenu) {
+          self.posistion.x = canvas.width * options.offsetX
+          self.posistion.y = canvas.height * options.offsetY
+        }
+        if (options.scaleMenu) {
+          self.size.x = canvas.width * options.fillX
+          self.size.y = canvas.height * options.fillY
+        }
+      }
+    },
+
+    //move the menu to the top when clicked
+    clickToTop: {
+      onClickUp(self) {
+        const menu = self
+        for (let index in openMenus) {
+          if (openMenus[index] == self) {
+            openMenus.splice(index, 1)
+            openMenus.push(menu)
+            break
+          }
+        }
+      }
+    }
   }
 }
 
@@ -856,7 +810,7 @@ let menus = {
           onRender(self, menu) {
             self.color = (self.targeted ? [150, 150, 150] : [255, 255, 255])
           },
-          onClick(self, menu) {
+          onClickUp(self, menu) {
             Menu.close(menu)
             Menu.open(menus.varTest)
           }
@@ -876,7 +830,7 @@ let menus = {
           onRender(self, menu) {
             self.color = (self.targeted ? [0, 150, 0] : [0, 255, 0])
           },
-          onClick(self, menu) {
+          onClickUp(self, menu) {
             const fonts = [
               'Arial',
               'Helvetica',
@@ -909,7 +863,7 @@ let menus = {
                   onRender(self, menu) {
                     self.color = (self.targeted ? [150, 0, 0] : [255, 0, 0])
                   },
-                  onClick(self, menu) {
+                  onClickUp(self, menu) {
                     menu.buttons.pop()
                   }
                 }
@@ -931,7 +885,7 @@ let menus = {
                   onRender(self, menu) {
                     self.color[3] = (self.targeted ? .5 : 1)
                   },
-                  onClick(self, menu) {
+                  onClickUp(self, menu) {
                     self.color = [Math.random() * 255, Math.random() * 255, Math.random() * 255]
                   }
                 }
@@ -991,7 +945,7 @@ let menus = {
           onRender(self, menu) {
             self.color = (self.targeted ? [0, 0, 150] : [0, 0, 255])
           },
-          onClick(self, menu) {
+          onClickUp(self, menu) {
             backgroundTransparency = Math.max(Math.round((backgroundTransparency - 0.1) * 10) / 10, 0)
             menu.title.text = "Current Background Transparency is " + backgroundTransparency
           }
@@ -1011,7 +965,7 @@ let menus = {
           onRender(self, menu) {
             self.color = (self.targeted ? [150, 150, 150] : [255, 255, 255])
           },
-          onClick(self, menu) {
+          onClickUp(self, menu) {
             Menu.close(menu)
             Menu.open(menus.moduleTest)
           }
@@ -1031,7 +985,7 @@ let menus = {
           onRender(self, menu) {
             self.color = (self.targeted ? [0, 0, 150] : [0, 0, 255])
           },
-          onClick(self, menu) {
+          onClickUp(self, menu) {
             backgroundTransparency = Math.min(Math.round((backgroundTransparency + 0.1) * 10) / 10, 1)
             menu.title.text = "Current Background Transparency is " + backgroundTransparency
           }
@@ -1088,7 +1042,7 @@ let menus = {
         files.offsetY = 0
       },
       onClose(self) { },
-      onClick(self) {
+      onClickUp(self) {
       }
     }
   },
@@ -1129,7 +1083,7 @@ let menus = {
         },
         functions: {
           onRender(self, menu) { },
-          onClick(self, menu) {
+          onClickUp(self, menu) {
             Menu.close(menu)
             Menu.open(menus.buttonTest)
           }
@@ -1150,7 +1104,7 @@ let menus = {
         },
         functions: {
           onRender(self, menu) { },
-          onClick(self, menu) {
+          onClickUp(self, menu) {
             Menu.open({
               cutCorners: true,
               stage: 10,
@@ -1188,7 +1142,7 @@ let menus = {
                   },
                   functions: {
                     onRender(self, menu) { },
-                    onClick(self, menu) {
+                    onClickUp(self, menu) {
                       Menu.close(menu)
                     }
                   },
@@ -1201,7 +1155,7 @@ let menus = {
                 onRender(self) { },
                 onOpen(self) { },
                 onClose(self) { },
-                onClick(self) { }
+                onClickUp(self) { }
               },
               modules: {
                 draggable: null,
@@ -1220,7 +1174,7 @@ let menus = {
       onRender(self) { },
       onOpen(self) { },
       onClose(self) { },
-      onClick(self) { }
+      onClickUp(self) { }
     },
     modules: {
       draggable: null,
