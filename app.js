@@ -36,7 +36,7 @@ const todo = {
   "Redo menu mouse detection": "Done",
   "Redo menu function detection": "Done",
   "Add onMouseDown / onMouseUp functions to menus / blocks": "Done",
-  "Make menu target selection take menus layer into account": "Planned",
+  "Make menu target selection take menus layer into account": "Done",
   "Add Matter": "Planned",
   "Create a shape library": "Planned",
   "Add support for convex shapes": "Planned",
@@ -127,7 +127,6 @@ let playerInputs = {
     y: 0
   }
 }
-let openMenus = []
 
 //setup canvas
 const canvas = document.querySelector('canvas');
@@ -150,7 +149,7 @@ let vieport = {
 //pack these together for readability
 const Menu = {
 
-  //runs any onOpen functions and adds the menu to openMenus
+  //runs any onOpen functions and adds the menu to Menu.openMenus
   open(menu) {
     if (menu.functions && menu.functions.onOpen) {
       menu.functions.onOpen(menu)
@@ -169,10 +168,10 @@ const Menu = {
         }
       }
     }
-    openMenus.push(menu)
+    Menu.openMenus.push(menu)
   },
 
-  //runs any onClose functions and removes the menu from openMenus
+  //runs any onClose functions and removes the menu from Menu.openMenus
   close(menu) {
     if (menu.functions && menu.functions.onClose) {
       menu.functions.onClose(menu)
@@ -191,8 +190,8 @@ const Menu = {
         }
       }
     }
-    for (let index in openMenus) {
-      if (openMenus[index] == menu) { openMenus.splice(index, 1) }
+    for (let index in Menu.openMenus) {
+      if (Menu.openMenus[index] == menu) { Menu.openMenus.splice(index, 1) }
     }
   },
 
@@ -200,8 +199,8 @@ const Menu = {
   render() {
 
     //run for each open menu
-    for (let menuIndex in openMenus) {
-      let currentMenu = openMenus[menuIndex]
+    for (let menuIndex in Menu.openMenus) {
+      let currentMenu = Menu.openMenus[menuIndex]
 
       //run the menus onRender function
       if (currentMenu.functions && currentMenu.functions.onRender) {
@@ -525,6 +524,33 @@ const Menu = {
   //for checking if the mouse is over a menu / button / clicking the menu / button
   checkMouse() {
 
+    //sort the menus based on their stage
+    function sortMenus() {
+
+      //a place to put them as I sort
+      let piles = {}
+
+      //run for each open menu
+      for (let menuIndex in Menu.openMenus) {
+        let currentMenu = Menu.openMenus[menuIndex]
+        let stage = currentMenu.stage
+
+        //add it to the piles in the correct group, keeping order
+        if (!piles[stage]) { piles[stage] = [] }
+        piles[stage].push(currentMenu)
+      }
+
+      //reset openMenus
+      Menu.openMenus = []
+
+      //stick the piless back together
+      for (let pileIndex in piles) {
+        let stack = piles[pileIndex]
+        Menu.openMenus = Menu.openMenus.concat(stack)
+      }
+
+    }
+
     //finds what the mouse is over, taking multiple menus and buttons layering into account
     function findTarget() {
 
@@ -533,8 +559,8 @@ const Menu = {
       let mouseY = playerInputs.mousePosistion.y
 
       //run thru the menus backwards to check the ones that show on top first
-      for (let menuIndex = openMenus.length - 1; menuIndex >= 0; menuIndex--) {
-        let currentMenu = openMenus[menuIndex]
+      for (let menuIndex = Menu.openMenus.length - 1; menuIndex >= 0; menuIndex--) {
+        let currentMenu = Menu.openMenus[menuIndex]
 
         //make sure the menu has buttons
         if (currentMenu.buttons && currentMenu.buttons.length > 0) {
@@ -609,14 +635,17 @@ const Menu = {
 
     }
 
+    //sort the menus
+    sortMenus()
+
     //find the target
     let target = findTarget()
 
     if (target) { target.self.targeted = true }
 
     //reset all the non target menu / buttons clickState to false
-    for (let menuIndex in openMenus) {
-      let currentMenu = openMenus[menuIndex]
+    for (let menuIndex in Menu.openMenus) {
+      let currentMenu = Menu.openMenus[menuIndex]
       if (target && currentMenu !== target.self) {
         currentMenu.clickStake = false
         currentMenu.targeted = false
@@ -663,8 +692,8 @@ const Menu = {
     hoverTint: {
       onRender(self, menu, input) {
         const options = {
-          min: .5,
-          speed: .5,
+          min: .25,
+          speed: .05,
           ...input
         }
         if (self.color.length == 3) { self.color[3] = 1 }
@@ -755,433 +784,438 @@ const Menu = {
 
     //move the menu to the top when clicked
     clickToTop: {
-      onClickUp(self) {
-        const menu = self
-        for (let index in openMenus) {
-          if (openMenus[index] == self) {
-            openMenus.splice(index, 1)
-            openMenus.push(menu)
+      onClickUp(self, input) {
+        let topStage = input && input.topStage ? input.topStage : self.stage
+        for (let index in Menu.openMenus) {
+          if (Menu.openMenus[index] == self) {
+            Menu.openMenus.splice(index, 1)
+            Menu.openMenus.push(self)
+            self.stage = topStage
             break
           }
         }
       }
     }
-  }
-}
+  },
 
-//a place to store menus
-let menus = {
-  buttonTest: {
-    cutCorners: true,
-    stage: 10,
-    size: {
-      x: 500,
-      y: 500
-    },
-    posistion: {
-      x: 100,
-      y: 100
-    },
-    draggable: false,
-    backgroundColor: [0, 0, 0, .75],
-    border: {
-      width: .015,
-      color: [50, 50, 50, .75]
-    },
-    title: {
-      text: "Button Font Testing Menu",
-      color: [200, 200, 200],
-      size: .2,
-      font: "Times"
-    },
-    padding: .05,
-    buttons: [
-      {
-        border: {
-          width: .1,
-          color: [0, 0, 0, .75]
-        },
-        color: null,
-        title: {
-          text: "Next Menu",
-          color: [0, 0, 0]
-        },
-        functions: {
-          onRender(self, menu) {
-            self.color = (self.targeted ? [150, 150, 150] : [255, 255, 255])
-          },
-          onClickUp(self, menu) {
-            Menu.close(menu)
-            Menu.open(menus.varTest)
-          }
-        }
+  //all the menus being displayed
+  openMenus: [],
+
+  //the place to store the menus
+  allMenus: {
+    buttonTest: {
+      cutCorners: true,
+      stage: 10,
+      size: {
+        x: 500,
+        y: 500
       },
-      {
-        border: {
-          width: .1,
-          color: [0, 0, 0, .75]
-        },
-        color: [0, 255, 0],
-        title: {
-          text: "Add a button",
-          color: [0, 0, 0]
-        },
-        functions: {
-          onRender(self, menu) {
-            self.color = (self.targeted ? [0, 150, 0] : [0, 255, 0])
+      posistion: {
+        x: 100,
+        y: 100
+      },
+      draggable: false,
+      backgroundColor: [0, 0, 0, .75],
+      border: {
+        width: .015,
+        color: [50, 50, 50, .75]
+      },
+      title: {
+        text: "Button Font Testing Menu",
+        color: [200, 200, 200],
+        size: .2,
+        font: "Times"
+      },
+      padding: .05,
+      buttons: [
+        {
+          border: {
+            width: .1,
+            color: [0, 0, 0, .75]
           },
-          onClickUp(self, menu) {
-            const fonts = [
-              'Arial',
-              'Helvetica',
-              'Times New Roman',
-              'Times',
-              'Courier New',
-              'Courier',
-              'Verdana',
-              'Georgia',
-              'Palatino',
-              'Garamond',
-              'Bookman',
-              'Comic Sans MS',
-              'Trebuchet MS',
-              'Arial Black',
-              'Impact'
-            ]
-            if (menu.buttons.length == 2) {
-              menu.buttons.push({
-                border: {
-                  width: .1,
-                  color: [0, 0, 0, .75]
-                },
-                color: [255, 0, 0],
-                title: {
-                  text: "Remove a button",
-                  color: [0, 0, 0]
-                },
-                functions: {
-                  onRender(self, menu) {
-                    self.color = (self.targeted ? [150, 0, 0] : [255, 0, 0])
-                  },
-                  onClickUp(self, menu) {
-                    menu.buttons.pop()
-                  }
-                }
-              })
-            } else {
-              const font = fonts[Math.floor(Math.random() * fonts.length)]
-              menu.buttons.push({
-                border: {
-                  width: .1,
-                  color: [0, 0, 0, .75]
-                },
-                color: [Math.random() * 255, Math.random() * 255, Math.random() * 255],
-                title: {
-                  text: "Button #" + menu.buttons.length + " " + font,
-                  color: [0, 0, 0],
-                  font: font
-                },
-                functions: {
-                  onRender(self, menu) {
-                    self.color[3] = (self.targeted ? .5 : 1)
-                  },
-                  onClickUp(self, menu) {
-                    self.color = [Math.random() * 255, Math.random() * 255, Math.random() * 255]
-                  }
-                }
-              })
+          color: null,
+          title: {
+            text: "Next Menu",
+            color: [0, 0, 0]
+          },
+          functions: {
+            onRender(self, menu) {
+              self.color = (self.targeted ? [150, 150, 150] : [255, 255, 255])
+            },
+            onClickUp(self, menu) {
+              Menu.close(menu)
+              Menu.open(Menu.allMenus.varTest)
             }
           }
-        }
-      },
-    ],
-    functions: {
-      onRender(self) {
-        self.size.x = canvas.width * .8
-        self.size.y = canvas.height * .8
-        self.posistion.x = canvas.width * .1
-        self.posistion.y = canvas.height * .1
-      },
-      onOpen(self) { },
-      onClose(self) { }
-    }
-  },
-  varTest: {
-    cutCorners: true,
-    stage: 10,
-    size: {
-      x: 500,
-      y: 500
-    },
-    posistion: {
-      x: 100,
-      y: 100
-    },
-    draggable: false,
-    backgroundColor: [0, 0, 0, .75],
-    border: {
-      width: .015,
-      color: [50, 50, 50, .75]
-    },
-    title: {
-      text: "",
-      color: [200, 200, 200],
-      size: .2,
-      font: "Times"
-    },
-    padding: .05,
-    buttons: [
-      {
-        border: {
-          width: .1,
-          color: [0, 0, 0, .75]
         },
-        color: null,
-        title: {
-          text: "-.1",
-          color: [0, 0, 0]
-        },
-        functions: {
-          onRender(self, menu) {
-            self.color = (self.targeted ? [0, 0, 150] : [0, 0, 255])
+        {
+          border: {
+            width: .1,
+            color: [0, 0, 0, .75]
           },
-          onClickUp(self, menu) {
-            backgroundTransparency = Math.max(Math.round((backgroundTransparency - 0.1) * 10) / 10, 0)
-            menu.title.text = "Current Background Transparency is " + backgroundTransparency
-          }
-        }
-      },
-      {
-        border: {
-          width: .1,
-          color: [0, 0, 0, .75]
-        },
-        color: null,
-        title: {
-          text: "Next Menu",
-          color: [0, 0, 0]
-        },
-        functions: {
-          onRender(self, menu) {
-            self.color = (self.targeted ? [150, 150, 150] : [255, 255, 255])
+          color: [0, 255, 0],
+          title: {
+            text: "Add a button",
+            color: [0, 0, 0]
           },
-          onClickUp(self, menu) {
-            Menu.close(menu)
-            Menu.open(menus.moduleTest)
-          }
-        }
-      },
-      {
-        border: {
-          width: .1,
-          color: [0, 0, 0, .75]
-        },
-        color: null,
-        title: {
-          text: "+.1",
-          color: [0, 0, 0]
-        },
-        functions: {
-          onRender(self, menu) {
-            self.color = (self.targeted ? [0, 0, 150] : [0, 0, 255])
-          },
-          onClickUp(self, menu) {
-            backgroundTransparency = Math.min(Math.round((backgroundTransparency + 0.1) * 10) / 10, 1)
-            menu.title.text = "Current Background Transparency is " + backgroundTransparency
-          }
-        }
-      },
-    ],
-    functions: {
-      onRender(self) {
-        let files = self.files
-
-        self.size.x = canvas.width * .6
-        self.size.y = canvas.height * .6
-
-        //set the posistion of the menu
-        self.posistion.x = files.targetX - files.offsetX
-        self.posistion.y = files.targetY - files.offsetY
-
-        //run on the first loop after mouseDown
-        if ((!files.moving) && self.mouseDown) {
-
-          //record the offset of the mouse to the menu
-          files.moving = true
-          files.offsetX = playerInputs.mousePosistion.x - files.targetX
-          files.offsetY = playerInputs.mousePosistion.y - files.targetY
-        }
-
-        //move the menu to the mouse
-        if (files.moving) {
-          files.targetX = playerInputs.mousePosistion.x
-          files.targetY = playerInputs.mousePosistion.y
-        }
-
-        //run when the mouse button is released
-        if (!playerInputs.buttons["mouseLeft"]) {
-
-          //reset everything
-          files.moving = false
-          files.targetX -= files.offsetX
-          files.targetY -= files.offsetY
-          files.offsetX = 0
-          files.offsetY = 0
-        }
-      },
-      onOpen(self) {
-        self.title.text = "Current Background Transparency is " + backgroundTransparency
-
-        //set initial states for moving menu
-        if (!self.files) { self.files = {} }
-        let files = self.files
-        files.moving = false
-        files.targetX = canvas.width * .2
-        files.targetY = canvas.height * .2
-        files.offsetX = 0
-        files.offsetY = 0
-      },
-      onClose(self) { },
-      onClickUp(self) {
-      }
-    }
-  },
-  moduleTest: {
-    cutCorners: true,
-    stage: 10,
-    size: {
-      x: 500,
-      y: 500
-    },
-    posistion: {
-      x: canvas.width * .2,
-      y: canvas.height * .2
-    },
-    draggable: false,
-    backgroundColor: [0, 0, 0, .75],
-    border: {
-      width: .015,
-      color: [50, 50, 50, .75]
-    },
-    title: {
-      text: "Module Testing Menu",
-      color: [200, 200, 200],
-      size: .2,
-      font: "Times"
-    },
-    padding: .05,
-    buttons: [
-      {
-        border: {
-          width: .1,
-          color: [0, 0, 0, .75]
-        },
-        color: [150, 150, 150],
-        title: {
-          text: "Next Menu",
-          color: [0, 0, 0]
-        },
-        functions: {
-          onRender(self, menu) { },
-          onClickUp(self, menu) {
-            Menu.close(menu)
-            Menu.open(menus.buttonTest)
-          }
-        },
-        modules: {
-          hoverTint: null
-        }
-      },
-      {
-        border: {
-          width: .1,
-          color: [0, 0, 0, .75]
-        },
-        color: [150, 150, 150],
-        title: {
-          text: "Add a menu",
-          color: [0, 0, 0]
-        },
-        functions: {
-          onRender(self, menu) { },
-          onClickUp(self, menu) {
-            Menu.open({
-              cutCorners: true,
-              stage: 10,
-              size: {
-                x: 500,
-                y: 500
-              },
-              posistion: {
-                x: Math.random() * canvas.width * .8,
-                y: Math.random() * canvas.height * .8
-              },
-              draggable: false,
-              backgroundColor: [0, 0, 0, .75],
-              border: {
-                width: .015,
-                color: [50, 50, 50, .75]
-              },
-              title: {
-                text: "Menu Creation Testing Menu",
-                color: [200, 200, 200],
-                size: .2,
-                font: "Times"
-              },
-              padding: .05,
-              buttons: [
-                {
+          functions: {
+            onRender(self, menu) {
+              self.color = (self.targeted ? [0, 150, 0] : [0, 255, 0])
+            },
+            onClickUp(self, menu) {
+              const fonts = [
+                'Arial',
+                'Helvetica',
+                'Times New Roman',
+                'Times',
+                'Courier New',
+                'Courier',
+                'Verdana',
+                'Georgia',
+                'Palatino',
+                'Garamond',
+                'Bookman',
+                'Comic Sans MS',
+                'Trebuchet MS',
+                'Arial Black',
+                'Impact'
+              ]
+              if (menu.buttons.length == 2) {
+                menu.buttons.push({
                   border: {
                     width: .1,
                     color: [0, 0, 0, .75]
                   },
-                  color: [150, 0, 0],
+                  color: [255, 0, 0],
                   title: {
-                    text: "Remove",
+                    text: "Remove a button",
                     color: [0, 0, 0]
                   },
                   functions: {
-                    onRender(self, menu) { },
+                    onRender(self, menu) {
+                      self.color = (self.targeted ? [150, 0, 0] : [255, 0, 0])
+                    },
                     onClickUp(self, menu) {
-                      Menu.close(menu)
+                      menu.buttons.pop()
                     }
-                  },
-                  modules: {
-                    "hoverTint": null
                   }
-                },
-              ],
-              functions: {
-                onRender(self) { },
-                onOpen(self) { },
-                onClose(self) { },
-                onClickUp(self) { }
-              },
-              modules: {
-                draggable: null,
-                dynamicSize: { moveMenu: false, fillX: .2, fillY: .2 },
-                clickToTop: null
+                })
+              } else {
+                const font = fonts[Math.floor(Math.random() * fonts.length)]
+                menu.buttons.push({
+                  border: {
+                    width: .1,
+                    color: [0, 0, 0, .75]
+                  },
+                  color: [Math.random() * 255, Math.random() * 255, Math.random() * 255],
+                  title: {
+                    text: "Button #" + menu.buttons.length + " " + font,
+                    color: [0, 0, 0],
+                    font: font
+                  },
+                  functions: {
+                    onRender(self, menu) {
+                      self.color[3] = (self.targeted ? .5 : 1)
+                    },
+                    onClickUp(self, menu) {
+                      self.color = [Math.random() * 255, Math.random() * 255, Math.random() * 255]
+                    }
+                  }
+                })
               }
-            })
+            }
           }
         },
-        modules: {
-          "hoverTint": null
-        }
-      },
-    ],
-    functions: {
-      onRender(self) { },
-      onOpen(self) { },
-      onClose(self) { },
-      onClickUp(self) { }
+      ],
+      functions: {
+        onRender(self) {
+          self.size.x = canvas.width * .8
+          self.size.y = canvas.height * .8
+          self.posistion.x = canvas.width * .1
+          self.posistion.y = canvas.height * .1
+        },
+        onOpen(self) { },
+        onClose(self) { }
+      }
     },
-    modules: {
-      draggable: null,
-      dynamicSize: { moveMenu: false, fillX: .6, fillY: .6 },
-      clickToTop: null
-    }
-  },
+    varTest: {
+      cutCorners: true,
+      stage: 10,
+      size: {
+        x: 500,
+        y: 500
+      },
+      posistion: {
+        x: 100,
+        y: 100
+      },
+      draggable: false,
+      backgroundColor: [0, 0, 0, .75],
+      border: {
+        width: .015,
+        color: [50, 50, 50, .75]
+      },
+      title: {
+        text: "",
+        color: [200, 200, 200],
+        size: .2,
+        font: "Times"
+      },
+      padding: .05,
+      buttons: [
+        {
+          border: {
+            width: .1,
+            color: [0, 0, 0, .75]
+          },
+          color: null,
+          title: {
+            text: "-.1",
+            color: [0, 0, 0]
+          },
+          functions: {
+            onRender(self, menu) {
+              self.color = (self.targeted ? [0, 0, 150] : [0, 0, 255])
+            },
+            onClickUp(self, menu) {
+              backgroundTransparency = Math.max(Math.round((backgroundTransparency - 0.1) * 10) / 10, 0)
+              menu.title.text = "Current Background Transparency is " + backgroundTransparency
+            }
+          }
+        },
+        {
+          border: {
+            width: .1,
+            color: [0, 0, 0, .75]
+          },
+          color: null,
+          title: {
+            text: "Next Menu",
+            color: [0, 0, 0]
+          },
+          functions: {
+            onRender(self, menu) {
+              self.color = (self.targeted ? [150, 150, 150] : [255, 255, 255])
+            },
+            onClickUp(self, menu) {
+              Menu.close(menu)
+              Menu.open(Menu.allMenus.moduleTest)
+            }
+          }
+        },
+        {
+          border: {
+            width: .1,
+            color: [0, 0, 0, .75]
+          },
+          color: null,
+          title: {
+            text: "+.1",
+            color: [0, 0, 0]
+          },
+          functions: {
+            onRender(self, menu) {
+              self.color = (self.targeted ? [0, 0, 150] : [0, 0, 255])
+            },
+            onClickUp(self, menu) {
+              backgroundTransparency = Math.min(Math.round((backgroundTransparency + 0.1) * 10) / 10, 1)
+              menu.title.text = "Current Background Transparency is " + backgroundTransparency
+            }
+          }
+        },
+      ],
+      functions: {
+        onRender(self) {
+          let files = self.files
+
+          self.size.x = canvas.width * .6
+          self.size.y = canvas.height * .6
+
+          //set the posistion of the menu
+          self.posistion.x = files.targetX - files.offsetX
+          self.posistion.y = files.targetY - files.offsetY
+
+          //run on the first loop after mouseDown
+          if ((!files.moving) && self.mouseDown) {
+
+            //record the offset of the mouse to the menu
+            files.moving = true
+            files.offsetX = playerInputs.mousePosistion.x - files.targetX
+            files.offsetY = playerInputs.mousePosistion.y - files.targetY
+          }
+
+          //move the menu to the mouse
+          if (files.moving) {
+            files.targetX = playerInputs.mousePosistion.x
+            files.targetY = playerInputs.mousePosistion.y
+          }
+
+          //run when the mouse button is released
+          if (!playerInputs.buttons["mouseLeft"]) {
+
+            //reset everything
+            files.moving = false
+            files.targetX -= files.offsetX
+            files.targetY -= files.offsetY
+            files.offsetX = 0
+            files.offsetY = 0
+          }
+        },
+        onOpen(self) {
+          self.title.text = "Current Background Transparency is " + backgroundTransparency
+
+          //set initial states for moving menu
+          if (!self.files) { self.files = {} }
+          let files = self.files
+          files.moving = false
+          files.targetX = canvas.width * .2
+          files.targetY = canvas.height * .2
+          files.offsetX = 0
+          files.offsetY = 0
+        },
+        onClose(self) { },
+        onClickUp(self) {
+        }
+      }
+    },
+    moduleTest: {
+      cutCorners: true,
+      stage: 10,
+      size: {
+        x: 500,
+        y: 500
+      },
+      posistion: {
+        x: canvas.width * .2,
+        y: canvas.height * .2
+      },
+      draggable: false,
+      backgroundColor: [0, 0, 0, .75],
+      border: {
+        width: .015,
+        color: [50, 50, 50, .75]
+      },
+      title: {
+        text: "Module Testing Menu",
+        color: [200, 200, 200],
+        size: .2,
+        font: "Times"
+      },
+      padding: .05,
+      buttons: [
+        {
+          border: {
+            width: .1,
+            color: [0, 0, 0, .75]
+          },
+          color: [150, 150, 150],
+          title: {
+            text: "Next Menu",
+            color: [0, 0, 0]
+          },
+          functions: {
+            onRender(self, menu) { },
+            onClickUp(self, menu) {
+              Menu.close(menu)
+              Menu.open(Menu.allMenus.buttonTest)
+            }
+          },
+          modules: {
+            hoverTint: null
+          }
+        },
+        {
+          border: {
+            width: .1,
+            color: [0, 0, 0, .75]
+          },
+          color: [150, 150, 150],
+          title: {
+            text: "Add a menu",
+            color: [0, 0, 0]
+          },
+          functions: {
+            onRender(self, menu) { },
+            onClickUp(self, menu) {
+              let stage = Math.ceil(Math.random() * 10)
+              Menu.open({
+                cutCorners: true,
+                stage: stage,
+                size: {
+                  x: 500,
+                  y: 500
+                },
+                posistion: {
+                  x: Math.random() * canvas.width * .8,
+                  y: Math.random() * canvas.height * .8
+                },
+                draggable: false,
+                backgroundColor: [0, 0, 0, .75],
+                border: {
+                  width: .015,
+                  color: [50, 50, 50, .75]
+                },
+                title: {
+                  text: "Menu Creation Testing Menu Stage " + stage,
+                  color: [200, 200, 200],
+                  size: .2,
+                  font: "Times"
+                },
+                padding: .05,
+                buttons: [
+                  {
+                    border: {
+                      width: .1,
+                      color: [0, 0, 0, .75]
+                    },
+                    color: [150, 0, 0],
+                    title: {
+                      text: "Remove",
+                      color: [0, 0, 0]
+                    },
+                    functions: {
+                      onRender(self, menu) { },
+                      onClickUp(self, menu) {
+                        Menu.close(menu)
+                      }
+                    },
+                    modules: {
+                      "hoverTint": null
+                    }
+                  },
+                ],
+                functions: {
+                  onRender(self) { },
+                  onOpen(self) { },
+                  onClose(self) { },
+                  onClickUp(self) { }
+                },
+                modules: {
+                  draggable: null,
+                  dynamicSize: { moveMenu: false, fillX: .2, fillY: .2 },
+                  clickToTop: {topStage: 10}
+                }
+              })
+            }
+          },
+          modules: {
+            "hoverTint": null
+          }
+        },
+      ],
+      functions: {
+        onRender(self) { },
+        onOpen(self) { },
+        onClose(self) { },
+        onClickUp(self) { }
+      },
+      modules: {
+        draggable: null,
+        dynamicSize: { moveMenu: false, fillX: .6, fillY: .6 },
+        clickToTop: null
+      }
+    },
+  }
 }
 
 //putting all the event listiners here so they don't take up so much space
@@ -1380,6 +1414,6 @@ function update(inputTime) {
   requestAnimationFrame(update)
 }
 
-Menu.open(menus.moduleTest)
+Menu.open(Menu.allMenus.moduleTest)
 
 requestAnimationFrame(update)
